@@ -322,7 +322,7 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
 
       // Animate billboards (blinking/color changing)
       billboardsRef.current.forEach((billboard) => {
-        if (Math.sin(timeRef.current * 2) > 0.7) {
+        if (Math.sin(timeRef.current * 2) > 0.7 && billboard.material) {
           billboard.currentColorIdx = (billboard.currentColorIdx + 1) % billboard.colors.length;
           const color = billboard.colors[billboard.currentColorIdx];
           billboard.material.color.setHex(color);
