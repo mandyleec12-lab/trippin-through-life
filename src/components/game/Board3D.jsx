@@ -19,6 +19,7 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
   const tilesRef = useRef([]);
   const windowLightsRef = useRef([]);
   const trafficRef = useRef([]);
+  const pedestriansRef = useRef([]);
   const particlesRef = useRef(null);
   const timeRef = useRef(0);
 
@@ -83,6 +84,46 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
+
+    // ===== STREET ROADS =====
+    // Horizontal road (left-right traffic)
+    const roadH = new THREE.Mesh(
+      new THREE.PlaneGeometry(60, 5),
+      new THREE.MeshStandardMaterial({
+        color: 0x2a2f3a,
+        roughness: 0.8,
+        metalness: 0,
+      })
+    );
+    roadH.rotation.x = -Math.PI / 2;
+    roadH.position.y = 0.01;
+    roadH.position.z = 5;
+    roadH.receiveShadow = true;
+    scene.add(roadH);
+
+    // Vertical road (forward-backward traffic)
+    const roadV = new THREE.Mesh(
+      new THREE.PlaneGeometry(6, 50),
+      new THREE.MeshStandardMaterial({
+        color: 0x2a2f3a,
+        roughness: 0.8,
+        metalness: 0,
+      })
+    );
+    roadV.rotation.x = -Math.PI / 2;
+    roadV.position.y = 0.01;
+    roadV.position.x = 5;
+    roadV.receiveShadow = true;
+    scene.add(roadV);
+
+    // Road markings (center line)
+    const lineGeometry = new THREE.PlaneGeometry(58, 0.2);
+    const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const centerLine = new THREE.Mesh(lineGeometry, lineMaterial);
+    centerLine.rotation.x = -Math.PI / 2;
+    centerLine.position.y = 0.02;
+    centerLine.position.z = 5;
+    scene.add(centerLine);
 
     // Create board tiles along a curved path
     const TILES = 30;
@@ -280,10 +321,11 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       scene.add(lampLight);
     });
 
-    // ===== TRAFFIC (Animated cars) =====
+    // ===== TRAFFIC (Animated cars on roads) =====
     const carColors = [0xff1493, 0x00ddff, 0xffdd00];
-    for (let i = 0; i < 3; i++) {
-      const carGeometry = new THREE.BoxGeometry(0.8, 0.6, 1.8);
+    // Horizontal traffic (on road Z=5)
+    for (let i = 0; i < 2; i++) {
+      const carGeometry = new THREE.BoxGeometry(1, 0.6, 1.8);
       const carMaterial = new THREE.MeshStandardMaterial({
         color: carColors[i],
         emissive: carColors[i],
@@ -296,7 +338,65 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       trafficRef.current.push({
         mesh: car,
         position: Math.random() * 40 - 20,
-        z: Math.random() > 0.5 ? -35 : 35,
+        z: 5,
+        x: null,
+      });
+    }
+    // Vertical traffic (on road X=5)
+    for (let i = 0; i < 2; i++) {
+      const carGeometry = new THREE.BoxGeometry(1.8, 0.6, 1);
+      const carMaterial = new THREE.MeshStandardMaterial({
+        color: carColors[2],
+        emissive: carColors[2],
+        emissiveIntensity: 0.4,
+      });
+      const car = new THREE.Mesh(carGeometry, carMaterial);
+      car.castShadow = true;
+      car.receiveShadow = true;
+      scene.add(car);
+      trafficRef.current.push({
+        mesh: car,
+        position: Math.random() * 30 - 15,
+        x: 5,
+        z: null,
+      });
+    }
+
+    // ===== PEDESTRIANS (Walking NPCs) =====
+    for (let i = 0; i < 5; i++) {
+      // Create simple humanoid (cylinder body + sphere head)
+      const group = new THREE.Group();
+
+      const bodyGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.8, 16);
+      const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: [0xff6666, 0x66ccff, 0x88ff88, 0xffcc66, 0xff88ff][i % 5],
+        roughness: 0.7,
+      });
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+      body.position.y = 0.4;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const headGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+      const headMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffdbac,
+        roughness: 0.5,
+      });
+      const head = new THREE.Mesh(headGeometry, headMaterial);
+      head.position.y = 1.15;
+      head.castShadow = true;
+      head.receiveShadow = true;
+      group.add(head);
+
+      scene.add(group);
+      pedestriansRef.current.push({
+        group,
+        x: Math.random() * 30 - 15,
+        z: Math.random() * 40 - 20,
+        vx: (Math.random() - 0.5) * 0.08,
+        vz: (Math.random() - 0.5) * 0.08,
+        time: Math.random() * Math.PI * 2,
       });
     }
 
@@ -347,9 +447,32 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
 
       // Animate traffic (cars moving)
       trafficRef.current.forEach((car) => {
-        car.position += 0.15;
-        if (car.position > 40) car.position = -40;
-        car.mesh.position.set(car.position, 1, car.z);
+        if (car.z !== null) {
+          // Horizontal traffic
+          car.position += 0.15;
+          if (car.position > 30) car.position = -30;
+          car.mesh.position.set(car.position, 0.5, car.z);
+        } else {
+          // Vertical traffic
+          car.position += 0.15;
+          if (car.position > 25) car.position = -25;
+          car.mesh.position.set(car.x, 0.5, car.position);
+        }
+      });
+
+      // Animate pedestrians (walking around city)
+      pedestriansRef.current.forEach((ped) => {
+        ped.time += 0.02;
+        ped.x += ped.vx;
+        ped.z += ped.vz;
+
+        // Bounce off edges
+        if (ped.x > 30 || ped.x < -30) ped.vx *= -1;
+        if (ped.z > 35 || ped.z < -35) ped.vz *= -1;
+
+        // Slight idle animation (bob up/down)
+        ped.group.position.set(ped.x, 0.05 + Math.sin(ped.time) * 0.05, ped.z);
+        ped.group.rotation.y = Math.atan2(ped.vz, ped.vx);
       });
 
       // Animate particles (floating/scrolling)
