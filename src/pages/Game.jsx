@@ -44,6 +44,7 @@ export default function Game() {
     setTimeout(() => {
       const result = Math.floor(Math.random() * 6) + 1;
       setDiceResult(result);
+      setIsRolling(false);
 
       // Start pawn movement
       setTimeout(() => {
