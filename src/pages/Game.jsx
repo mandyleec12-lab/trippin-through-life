@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import CityScene from '@/components/game/CityScene';
-import GameBoard from '@/components/game/GameBoard';
-import Pawn from '@/components/game/Pawn';
+import Board3D from '@/components/game/Board3D';
 import DiceRoller from '@/components/game/DiceRoller';
 import GameCard from '@/components/game/GameCard';
 import HUD from '@/components/game/HUD';
@@ -143,15 +141,10 @@ export default function Game() {
   const path = LIFE_PATHS[selectedPath];
   const pawnColor = PAWN_COLORS[0]; // First player for now
 
-  // Calculate pawn screen position based on tile
-  const tilePosition = position / 30; // 0 to 1
-  const pawnY = 400 - tilePosition * 350; // Top to bottom
-  const pawnX = 200 + Math.sin(tilePosition * Math.PI * 2) * 100; // Curved side to side
-
   return (
     <div className="fixed inset-0 bg-slate-950 overflow-hidden">
-      {/* City background */}
-      <CityScene inChaosRealm={gameState.inChaosRealm} />
+      {/* 3D Board */}
+      <Board3D position={position} diceResult={diceResult} isMoving={isMoving} pawnColor={pawnColor.name.toLowerCase()} />
 
       {/* HUD */}
       <HUD
@@ -161,19 +154,6 @@ export default function Game() {
         pathName={path.name}
         turn={gameState.turn}
         inChaosRealm={gameState.inChaosRealm}
-      />
-
-      {/* Game board */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <GameBoard position={position} inChaosRealm={gameState.inChaosRealm} />
-      </div>
-
-      {/* Pawn */}
-      <Pawn
-        color={pawnColor.name.toLowerCase()}
-        position={{ x: pawnX, y: pawnY }}
-        isMoving={isMoving}
-        label="You"
       />
 
       {/* Controls at bottom */}
