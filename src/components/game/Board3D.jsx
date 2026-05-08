@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
  * 3D Board Game using Three.js
  * Neon cyberpunk city aesthetic with colored tile paths
  * Animated dice and moving pawns
+ * Rich environmental immersion with buildings, signs, particles, traffic
  */
 export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
   const containerRef = useRef(null);
@@ -16,13 +17,18 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
   const diceRef = useRef(null);
   const pawnRef = useRef(null);
   const tilesRef = useRef([]);
+  const windowLightsRef = useRef([]);
+  const trafficRef = useRef([]);
+  const particlesRef = useRef(null);
+  const timeRef = useRef(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0e27);
+    scene.background = new THREE.Color(0x0d1117);
+    scene.fog = new THREE.Fog(0x0d1117, 50, 100);
     sceneRef.current = scene;
 
     // Camera
@@ -32,33 +38,46 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       0.1,
       1000
     );
-    camera.position.set(0, 8, 15);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 2, 0);
     cameraRef.current = camera;
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // Advanced Lighting: Warm city glow + neon accents
+    const ambientLight = new THREE.AmbientLight(0xff9944, 0.5);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 10, 7);
+    const directionalLight = new THREE.DirectionalLight(0xffcc88, 0.6);
+    directionalLight.position.set(10, 15, 10);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.far = 100;
+    directionalLight.shadow.bias = -0.0001;
     scene.add(directionalLight);
 
-    // Ground
-    const groundGeometry = new THREE.PlaneGeometry(40, 40);
+    // Neon ambience lights
+    const neonLight1 = new THREE.PointLight(0xff00ff, 0.4, 50);
+    neonLight1.position.set(-20, 10, -15);
+    scene.add(neonLight1);
+
+    const neonLight2 = new THREE.PointLight(0x00ffff, 0.3, 50);
+    neonLight2.position.set(20, 10, 25);
+    scene.add(neonLight2);
+
+    // Ground (City street with texture)
+    const groundGeometry = new THREE.PlaneGeometry(80, 80);
     const groundMaterial = new THREE.MeshStandardMaterial({
       color: 0x1a1f3a,
-      roughness: 0.8,
+      roughness: 0.6,
+      metalness: 0.1,
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
@@ -72,14 +91,14 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
 
     const getTilePosition = (index) => {
       const progress = index / (TILES - 1);
-      const z = 15 - progress * 25; // Back to front
-      const x = Math.sin(progress * Math.PI * 2) * 5; // Meandering
+      const z = 15 - progress * 28; // Back to front
+      const x = Math.sin(progress * Math.PI * 2) * 6; // Meandering
       return { x, z };
     };
 
     // Tile colors (matching image: pink, orange, cyan, yellow paths)
     const tileColors = [
-      0xff00ff, // Magenta
+      0xff1493, // Deep pink
       0xff6600, // Orange
       0x00ddff, // Cyan
       0xffdd00, // Yellow
@@ -91,32 +110,37 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       const color = tileColors[colorIndex];
 
       // Tile geometry
-      const tileGeometry = new THREE.BoxGeometry(tileSize, 0.2, tileSize);
+      const tileGeometry = new THREE.BoxGeometry(tileSize, 0.3, tileSize);
       const tileMaterial = new THREE.MeshStandardMaterial({
         color: color,
         emissive: color,
-        emissiveIntensity: 0.6,
-        metalness: 0.3,
-        roughness: 0.4,
+        emissiveIntensity: 0.7,
+        metalness: 0.4,
+        roughness: 0.3,
       });
       const tile = new THREE.Mesh(tileGeometry, tileMaterial);
-      tile.position.set(pos.x, 0.1, pos.z);
+      tile.position.set(pos.x, 0.2, pos.z);
       tile.castShadow = true;
       tile.receiveShadow = true;
       tile.userData.index = i;
       scene.add(tile);
       tilesRef.current.push(tile);
 
+      // Tile glow light
+      const tileLight = new THREE.PointLight(color, 0.6, 8);
+      tileLight.position.set(pos.x, 2, pos.z);
+      scene.add(tileLight);
+
       // Glow effect for current position
       if (i === Math.floor(position)) {
-        const glowGeometry = new THREE.BoxGeometry(tileSize * 1.3, 0.1, tileSize * 1.3);
+        const glowGeometry = new THREE.BoxGeometry(tileSize * 1.5, 0.1, tileSize * 1.5);
         const glowMaterial = new THREE.MeshBasicMaterial({
           color: color,
           transparent: true,
-          opacity: 0.3,
+          opacity: 0.4,
         });
         const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        glow.position.set(pos.x, 0.05, pos.z);
+        glow.position.set(pos.x, 0.1, pos.z);
         scene.add(glow);
       }
     }
@@ -127,9 +151,9 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
     const diceMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       emissive: 0xffffff,
-      emissiveIntensity: 0.3,
-      metalness: 0.2,
-      roughness: 0.3,
+      emissiveIntensity: 0.5,
+      metalness: 0.3,
+      roughness: 0.2,
     });
     const dice = new THREE.Mesh(diceGeometry, diceMaterial);
     dice.position.set(-8, 2, 8);
@@ -138,8 +162,12 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
     scene.add(dice);
     diceRef.current = dice;
 
+    const diceLight = new THREE.PointLight(0xffffff, 0.8, 15);
+    diceLight.position.set(-8, 4, 8);
+    scene.add(diceLight);
+
     // Create pawn
-    const pawnGeometry = new THREE.ConeGeometry(0.5, 1.5, 32);
+    const pawnGeometry = new THREE.ConeGeometry(0.6, 1.8, 32);
     const colorMap = {
       pink: 0xff1493,
       purple: 0x9933ff,
@@ -148,55 +176,156 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       gold: 0xffdd00,
       coral: 0xff6666,
     };
+    const pawnColor_val = colorMap[pawnColor] || colorMap.purple;
     const pawnMaterial = new THREE.MeshStandardMaterial({
-      color: colorMap[pawnColor] || colorMap.purple,
-      emissive: colorMap[pawnColor] || colorMap.purple,
-      emissiveIntensity: 0.5,
-      metalness: 0.4,
-      roughness: 0.2,
+      color: pawnColor_val,
+      emissive: pawnColor_val,
+      emissiveIntensity: 0.6,
+      metalness: 0.5,
+      roughness: 0.15,
     });
     const pawn = new THREE.Mesh(pawnGeometry, pawnMaterial);
-    pawn.position.set(getTilePosition(0).x, 1, getTilePosition(0).z);
+    pawn.position.set(getTilePosition(0).x, 1.2, getTilePosition(0).z);
     pawn.castShadow = true;
     pawn.receiveShadow = true;
     scene.add(pawn);
     pawnRef.current = pawn;
 
-    // Buildings/Neon signs (simplified)
-    const buildingPositions = [
-      { x: -15, z: -10 },
-      { x: 15, z: -10 },
-      { x: -12, z: 20 },
-      { x: 12, z: 20 },
+    const pawnLight = new THREE.PointLight(pawnColor_val, 0.8, 12);
+    pawnLight.position.set(getTilePosition(0).x, 3, getTilePosition(0).z);
+    scene.add(pawnLight);
+
+    // ===== CITY BUILDINGS WITH WINDOWS =====
+    const buildingConfigs = [
+      { x: -25, z: -8, w: 4, h: 15, d: 3 },
+      { x: 25, z: -5, w: 5, h: 18, d: 3 },
+      { x: -28, z: 25, w: 4, h: 16, d: 3 },
+      { x: 28, z: 28, w: 5, h: 14, d: 3 },
+      { x: -15, z: -25, w: 6, h: 12, d: 2 },
+      { x: 18, z: -28, w: 5, h: 13, d: 2 },
     ];
 
-    buildingPositions.forEach((pos) => {
-      const buildingGeometry = new THREE.BoxGeometry(3, 8, 2);
+    buildingConfigs.forEach((cfg) => {
+      const buildingGeometry = new THREE.BoxGeometry(cfg.w, cfg.h, cfg.d);
       const buildingMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1f3a,
-        roughness: 0.9,
+        color: 0x0f1419,
+        roughness: 0.95,
+        metalness: 0.05,
       });
       const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
-      building.position.set(pos.x, 4, pos.z);
+      building.position.set(cfg.x, cfg.h / 2, cfg.z);
       building.castShadow = true;
       building.receiveShadow = true;
       scene.add(building);
 
-      // Neon sign on building
-      const signGeometry = new THREE.PlaneGeometry(2.5, 2);
-      const signMaterial = new THREE.MeshBasicMaterial({
-        color: 0xff00ff,
-        emissive: 0xff00ff,
+      // Animated window lights
+      const windowRows = Math.floor(cfg.h / 1.5);
+      const windowCols = Math.floor(cfg.w / 1.2);
+      for (let row = 0; row < windowRows; row++) {
+        for (let col = 0; col < windowCols; col++) {
+          const windowLight = new THREE.PointLight(
+            Math.random() > 0.5 ? 0xffcc88 : 0xffaa00,
+            Math.random() * 0.3 + 0.2,
+            6
+          );
+          windowLight.position.set(
+            cfg.x - cfg.w / 2 + (col + 0.5) * 1.2,
+            row * 1.5 + 1,
+            cfg.z + cfg.d / 2 + 0.5
+          );
+          scene.add(windowLight);
+          windowLightsRef.current.push(windowLight);
+        }
+      }
+
+      // Neon billboard on top
+      const billboardGeometry = new THREE.PlaneGeometry(cfg.w * 0.9, 2);
+      const billboardColor = [0xff1493, 0x00ddff, 0xffdd00, 0xff6600][
+        Math.floor(Math.random() * 4)
+      ];
+      const billboardMaterial = new THREE.MeshBasicMaterial({
+        color: billboardColor,
+        emissive: billboardColor,
       });
-      const sign = new THREE.Mesh(signGeometry, signMaterial);
-      sign.position.set(pos.x, 6, pos.z + 1.1);
-      scene.add(sign);
+      const billboard = new THREE.Mesh(billboardGeometry, billboardMaterial);
+      billboard.position.set(cfg.x, cfg.h + 1.5, cfg.z - cfg.d / 2 - 0.5);
+      scene.add(billboard);
     });
+
+    // ===== STREET ELEMENTS =====
+    // Streetlights
+    const streetLightPositions = [
+      { x: -20, z: 0 },
+      { x: 20, z: 5 },
+      { x: -25, z: 15 },
+      { x: 25, z: -10 },
+    ];
+
+    streetLightPositions.forEach((pos) => {
+      const poleGeometry = new THREE.CylinderGeometry(0.2, 0.25, 8, 8);
+      const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+      const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+      pole.position.set(pos.x, 4, pos.z);
+      pole.castShadow = true;
+      scene.add(pole);
+
+      const lampGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+      const lampMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc88 });
+      const lamp = new THREE.Mesh(lampGeometry, lampMaterial);
+      lamp.position.set(pos.x, 7.5, pos.z);
+      scene.add(lamp);
+
+      const lampLight = new THREE.PointLight(0xffcc88, 1.2, 20);
+      lampLight.position.set(pos.x, 7.5, pos.z);
+      scene.add(lampLight);
+    });
+
+    // ===== TRAFFIC (Animated cars) =====
+    const carColors = [0xff1493, 0x00ddff, 0xffdd00];
+    for (let i = 0; i < 3; i++) {
+      const carGeometry = new THREE.BoxGeometry(0.8, 0.6, 1.8);
+      const carMaterial = new THREE.MeshStandardMaterial({
+        color: carColors[i],
+        emissive: carColors[i],
+        emissiveIntensity: 0.4,
+      });
+      const car = new THREE.Mesh(carGeometry, carMaterial);
+      car.castShadow = true;
+      car.receiveShadow = true;
+      scene.add(car);
+      trafficRef.current.push({
+        mesh: car,
+        position: Math.random() * 40 - 20,
+        z: Math.random() > 0.5 ? -35 : 35,
+      });
+    }
+
+    // ===== FLOATING PARTICLES =====
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 300;
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 80;
+      positions[i + 1] = Math.random() * 40;
+      positions[i + 2] = (Math.random() - 0.5) * 80;
+    }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0x00ddff,
+      size: 0.1,
+      transparent: true,
+      opacity: 0.6,
+      sizeAttenuation: true,
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+    particlesRef.current = particles;
 
     // Animation loop
     let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
+      timeRef.current += 0.016; // ~60fps
 
       // Rotate dice if rolling
       if (diceRef.current) {
@@ -207,8 +336,32 @@ export default function Board3D({ position, diceResult, isMoving, pawnColor }) {
       // Move pawn along path
       if (pawnRef.current && position !== undefined) {
         const targetPos = getTilePosition(Math.min(position, TILES - 1));
-        pawnRef.current.position.x += (targetPos.x - pawnRef.current.position.x) * 0.1;
-        pawnRef.current.position.z += (targetPos.z - pawnRef.current.position.z) * 0.1;
+        pawnRef.current.position.x += (targetPos.x - pawnRef.current.position.x) * 0.12;
+        pawnRef.current.position.z += (targetPos.z - pawnRef.current.position.z) * 0.12;
+      }
+
+      // Animate window lights flickering
+      windowLightsRef.current.forEach((light, idx) => {
+        light.intensity = 0.2 + Math.sin(timeRef.current * 2 + idx * 0.5) * 0.15;
+      });
+
+      // Animate traffic (cars moving)
+      trafficRef.current.forEach((car) => {
+        car.position += 0.15;
+        if (car.position > 40) car.position = -40;
+        car.mesh.position.set(car.position, 1, car.z);
+      });
+
+      // Animate particles (floating/scrolling)
+      if (particlesRef.current) {
+        const positions = particlesRef.current.geometry.attributes.position.array;
+        for (let i = 1; i < positions.length; i += 3) {
+          positions[i] -= 0.05;
+          if (positions[i] < 0) {
+            positions[i] = 40;
+          }
+        }
+        particlesRef.current.geometry.attributes.position.needsUpdate = true;
       }
 
       renderer.render(scene, camera);
