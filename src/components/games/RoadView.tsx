@@ -124,6 +124,11 @@ const toSvgLanePath = (points: LanePoint[]) => {
   if (!points.length) return '';
   return points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
 };
+const toSvgSegmentPath = (start: LanePoint, end: LanePoint) => `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+const getPerspectiveScale = (y: number) => {
+  // Keeps the board readable like a city street receding into the skyline.
+  return 0.72 + Math.max(0, Math.min(y, 100)) / 100 * 0.56;
+};
 const getPointOnLaneCurve = (points: LanePoint[], progress: number) => {
   if (points.length === 0) {
     return {
@@ -363,20 +368,25 @@ function useStepAnimation(targetPos: number, resetKey: string): {
 const LANE_LABELS = ['College', 'High School / GED', 'Dropout'];
 const LANE_DISTRICTS = ['Campus Corridor', 'GED Midtown', 'Hustle Row'];
 const CITY_BLOCKS = [
-  { left: '11%', top: '17%', width: '15%', height: '15%', label: 'lofts', glow: '#38bdf8' },
-  { left: '27%', top: '18%', width: '11%', height: '10%', label: 'media', glow: '#f472b6' },
-  { left: '64%', top: '16%', width: '14%', height: '16%', label: 'ads', glow: '#f97316' },
-  { left: '77%', top: '32%', width: '10%', height: '18%', label: 'hotel', glow: '#a78bfa' },
-  { left: '11%', top: '39%', width: '13%', height: '17%', label: 'market', glow: '#34d399' },
-  { left: '70%', top: '55%', width: '15%', height: '15%', label: 'studio', glow: '#ec4899' },
-  { left: '17%', top: '64%', width: '12%', height: '17%', label: 'garage', glow: '#f59e0b' },
-  { left: '79%', top: '73%', width: '10%', height: '12%', label: 'mall', glow: '#60a5fa' }
+  { left: '9%', top: '13%', width: '14%', height: '16%', label: 'lofts', glow: '#38bdf8' },
+  { left: '25%', top: '16%', width: '10%', height: '10%', label: 'media', glow: '#f472b6' },
+  { left: '66%', top: '13%', width: '15%', height: '17%', label: 'ads', glow: '#f97316' },
+  { left: '80%', top: '31%', width: '10%', height: '18%', label: 'hotel', glow: '#a78bfa' },
+  { left: '8%', top: '38%', width: '13%', height: '17%', label: 'market', glow: '#34d399' },
+  { left: '71%', top: '54%', width: '16%', height: '15%', label: 'studio', glow: '#ec4899' },
+  { left: '14%', top: '66%', width: '12%', height: '16%', label: 'garage', glow: '#f59e0b' },
+  { left: '78%', top: '75%', width: '11%', height: '12%', label: 'mall', glow: '#60a5fa' }
 ];
 const BILLBOARD_SITES = [
-  { left: '18%', top: '30%', text: 'AD SPACE', color: '#38bdf8' },
-  { left: '70%', top: '25%', text: 'BRAND', color: '#f97316' },
-  { left: '14%', top: '58%', text: 'SPONSOR', color: '#a855f7' },
-  { left: '75%', top: '66%', text: 'LOCAL DEAL', color: '#ec4899' }
+  { left: '12%', top: '31%', text: 'YOU DECIDE', color: '#38bdf8', rotate: -4 },
+  { left: '70%', top: '25%', text: 'LIVE YOUR DREAMS', color: '#f97316', rotate: 3 },
+  { left: '11%', top: '58%', text: 'GOOD EATS', color: '#a855f7', rotate: -6 },
+  { left: '76%', top: '66%', text: 'NO RISK NO REWARD', color: '#ec4899', rotate: 5 }
+];
+const ROUTE_HERO_SIGNS = [
+  { left: '50%', top: '8%', width: 230, title: "TRIPPIN'", subtitle: 'THROUGH LIFE', color: '#f472b6' },
+  { left: '13%', top: '48%', width: 132, title: 'CHOOSE YOUR PATH', subtitle: 'COLLEGE  GED  DROPOUT', color: '#a855f7' },
+  { left: '82%', top: '45%', width: 140, title: 'OPPORTUNITY', subtitle: 'IS EVERYWHERE', color: '#22d3ee' }
 ];
 
 // MAIN COMPONENT
@@ -429,6 +439,23 @@ export function RoadView(props: RoadViewProps) {
         backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 48% 46%, rgba(236,72,153,0.16), transparent 46%)',
         backgroundSize: '8% 8%, 8% 8%, 100% 100%'
       }} />
+        {ROUTE_HERO_SIGNS.map((sign, index) => <div key={`route-hero-sign-${index}`} className="absolute -translate-x-1/2 rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-center backdrop-blur-sm" style={{
+        left: sign.left,
+        top: sign.top,
+        width: sign.width,
+        boxShadow: `0 0 28px ${sign.color}66, inset 0 1px 0 rgba(255,255,255,0.16)`,
+        zIndex: 9
+      }}>
+            <div className="text-base font-black uppercase italic leading-none tracking-[0.12em]" style={{
+          color: sign.color,
+          textShadow: `0 0 16px ${sign.color}`
+        }}>
+              {sign.title}
+            </div>
+            <div className="mt-1 text-[8px] font-black uppercase tracking-[0.22em] text-white/80">
+              {sign.subtitle}
+            </div>
+          </div>)}
         {CITY_BLOCKS.map((block, index) => <div key={`city-block-${index}`} className="absolute rounded-xl border border-white/10 overflow-hidden" style={{
         left: block.left,
         top: block.top,
@@ -451,7 +478,9 @@ export function RoadView(props: RoadViewProps) {
         left: site.left,
         top: site.top,
         boxShadow: `0 0 20px ${site.color}66, inset 0 1px 0 rgba(255,255,255,0.14)`,
-        color: site.color
+        color: site.color,
+        transform: `rotate(${site.rotate}deg)`,
+        zIndex: 10
       }} animate={{
         opacity: [0.65, 1, 0.7]
       }} transition={{
@@ -474,11 +503,19 @@ export function RoadView(props: RoadViewProps) {
           {overviewSvgPaths.map((lanePath, laneIdx) => {
           const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
           return <g key={`lane-road-${laneIdx}`}>
-                <path d={lanePath} fill="none" stroke="rgba(1,4,12,0.86)" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
-                <path d={lanePath} fill="none" stroke={`${laneColor}55`} strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" filter="url(#city-road-glow)" />
-                <path d={lanePath} fill="none" stroke="rgba(13,18,31,0.98)" strokeWidth={10.6} strokeLinecap="round" strokeLinejoin="round" />
+                {overviewLaneCurves[laneIdx]?.slice(0, -1).map((start, segmentIdx) => {
+              const end = overviewLaneCurves[laneIdx][segmentIdx + 1];
+              const segmentScale = getPerspectiveScale((start.y + end.y) / 2);
+              const segmentPath = toSvgSegmentPath(start, end);
+              return <g key={`road-segment-${laneIdx}-${segmentIdx}`}>
+                    <path d={segmentPath} fill="none" stroke="rgba(1,4,12,0.9)" strokeWidth={17 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${laneColor}66`} strokeWidth={14.2 * segmentScale} strokeLinecap="round" strokeLinejoin="round" filter="url(#city-road-glow)" />
+                    <path d={segmentPath} fill="none" stroke="rgba(13,18,31,0.98)" strokeWidth={11.2 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${laneColor}cc`} strokeWidth={0.8 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                  </g>;
+            })}
                 <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={1.45} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.2 3.2" filter="url(#city-road-glow)" />
-                <path d={lanePath} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="0.35 5.5" />
+                <path d={lanePath} fill="none" stroke="rgba(255,255,255,0.26)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="0.35 5.5" />
                 {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
               const point = getPointOnLaneCurve(overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0], progress);
               return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={0.55} fill={laneColor} opacity={0.5} />;
@@ -536,8 +573,12 @@ export function RoadView(props: RoadViewProps) {
             const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
             const TileIcon = styleInfo.icon;
             const tileRotate = showDetailedCard ? 0 : Math.max(-26, Math.min(26, point.angle));
-            const width = showDetailedCard ? 176 : isCheckpoint ? 42 : 30;
-            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : isCheckpoint ? 18 : 12;
+            const perspectiveScale = getPerspectiveScale(point.y);
+            const overviewWidth = Math.round((isCheckpoint ? 48 : 36) * perspectiveScale);
+            const overviewHeight = Math.round((isCheckpoint ? 24 : 17) * perspectiveScale);
+            const showOverviewText = !showDetailedCard && (isCheckpoint || point.y > 68);
+            const width = showDetailedCard ? 176 : overviewWidth;
+            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : overviewHeight;
             return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? 'rounded-2xl px-3 py-2 text-center' : 'rounded-md'} flex items-center justify-center backdrop-blur-md overflow-hidden`} style={{
               left: `${point.x}%`,
               top: `${point.y}%`,
@@ -572,7 +613,10 @@ export function RoadView(props: RoadViewProps) {
                         </div>
                       </div> : <Fragment>
                         <div className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-white/25" />
-                        {isCheckpoint ? <span className="relative text-[7px] font-black text-white/85">{idx + 1}</span> : <div className="relative h-1.5 w-1.5 rounded-full bg-white/75" style={{
+                        {showOverviewText ? <div className="relative flex max-w-full items-center gap-1 px-1">
+                          <TileIcon className="h-2.5 w-2.5 shrink-0 text-white/85" />
+                          <span className="truncate text-[6px] font-black leading-none text-white/90">{tile.name}</span>
+                        </div> : <div className="relative h-1.5 w-1.5 rounded-full bg-white/75" style={{
                     boxShadow: `0 0 8px ${laneColor}`
                   }} />}
                       </Fragment>}
