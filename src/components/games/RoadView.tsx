@@ -33,8 +33,8 @@ interface RoadViewProps {
   activePathTiles: number[][];
   players: Player[];
   currentPlayerIndex: number;
-  // null  = overview (show all lanes)
-  // 0..2  = zoomed into that player's assigned education path
+  // null  = follow the current player's lane
+  // 0..2  = follow that specific education path
   focusedPathIndex: number | null;
   getTileById: (id: number) => TileLite;
   categoryStyles: Record<string, {
@@ -56,78 +56,110 @@ const PAWN_COLORS: Record<string, string> = {
 const HOP_DURATION_MS = 440;
 const ZOOMED_CARD_HEIGHT_PX = 78;
 const ZOOMED_VISIBLE_CARD_RANGE = 2;
+const BOARD_MIN_WORLD_WIDTH_PX = 1180;
+const BOARD_MIN_WORLD_HEIGHT_PX = 3300;
+const BOARD_WORLD_WIDTH_MULTIPLIER = 2.05;
+const BOARD_WORLD_HEIGHT_MULTIPLIER = 4.6;
+const CAMERA_Y_ANCHOR = 0.56;
+const NEARBY_OTHER_LANE_CARD_WINDOW = 0.34;
 type LanePoint = {
   x: number;
   y: number;
 };
-const OVERVIEW_LANE_CURVES: Record<number, LanePoint[]> = {
-  // Bottom -> top. Curves intentionally weave to mimic elevated city lanes.
+const FOCUSED_LANE_CURVES: Record<number, LanePoint[]> = {
+  // Bottom -> top in normalized world coordinates. These lanes breathe first,
+  // then come together only at a few intentional overpass/intersection moments.
   0: [{
-    x: 26,
-    y: 86
+    x: 31,
+    y: 92
   }, {
-    x: 30,
-    y: 74
+    x: 27,
+    y: 78
   }, {
-    x: 44,
-    y: 58
+    x: 35,
+    y: 64
   }, {
-    x: 39,
-    y: 44
+    x: 43,
+    y: 51
   }, {
-    x: 53,
-    y: 28
+    x: 35,
+    y: 37
   }, {
-    x: 47,
-    y: 14
+    x: 42,
+    y: 23
+  }, {
+    x: 46,
+    y: 8
   }],
   1: [{
     x: 50,
-    y: 86
-  }, {
-    x: 45,
-    y: 72
-  }, {
-    x: 34,
-    y: 56
+    y: 92
   }, {
     x: 53,
-    y: 42
+    y: 78
   }, {
-    x: 41,
-    y: 26
+    x: 46,
+    y: 64
   }, {
-    x: 56,
-    y: 14
+    x: 50,
+    y: 51
+  }, {
+    x: 58,
+    y: 38
+  }, {
+    x: 49,
+    y: 23
+  }, {
+    x: 51,
+    y: 8
   }],
   2: [{
-    x: 74,
-    y: 86
+    x: 69,
+    y: 92
   }, {
-    x: 67,
-    y: 72
+    x: 73,
+    y: 78
   }, {
-    x: 55,
-    y: 57
+    x: 65,
+    y: 64
   }, {
-    x: 63,
-    y: 43
+    x: 57,
+    y: 51
   }, {
-    x: 47,
-    y: 27
+    x: 66,
+    y: 37
   }, {
     x: 59,
-    y: 14
+    y: 23
+  }, {
+    x: 56,
+    y: 8
   }]
 };
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const toSvgLanePath = (points: LanePoint[]) => {
   if (!points.length) return '';
   return points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
 };
 const toSvgSegmentPath = (start: LanePoint, end: LanePoint) => `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
-const getPerspectiveScale = (y: number) => {
+const getPerspectiveScale = (y: number, worldHeight = 100) => {
   // Keeps the board readable like a city street receding into the skyline.
-  return 0.72 + Math.max(0, Math.min(y, 100)) / 100 * 0.56;
+  const normalizedY = clamp(y / worldHeight, 0, 1);
+  return 0.86 + normalizedY * 0.2;
+};
+const getReadableLaneTilt = (angle: number, maxTilt = 10) => {
+  // A vertical lane points near -90deg; normalize around that so cards stay legible.
+  return clamp((angle + 90) * 0.35, -maxTilt, maxTilt);
+};
+const toWorldPoint = (point: LanePoint, worldWidth: number, worldHeight: number): LanePoint => ({
+  x: point.x / 100 * worldWidth,
+  y: point.y / 100 * worldHeight
+});
+const getWorldLaneCurves = (worldWidth: number, worldHeight: number) => {
+  return Object.fromEntries(Object.entries(FOCUSED_LANE_CURVES).map(([laneIdx, points]) => [
+    Number(laneIdx),
+    points.map((point) => toWorldPoint(point, worldWidth, worldHeight))
+  ])) as Record<number, LanePoint[]>;
 };
 const getPointOnLaneCurve = (points: LanePoint[], progress: number) => {
   if (points.length === 0) {
@@ -413,8 +445,31 @@ export function RoadView(props: RoadViewProps) {
     categoryStyles
   } = props;
   const currentPlayer = players[currentPlayerIndex];
-  const isZoomed = focusedPathIndex !== null && focusedPathIndex !== undefined;
-  const activePathIdx = isZoomed ? focusedPathIndex! : currentPlayer.pathIndex !== null && currentPlayer.pathIndex !== undefined ? currentPlayer.pathIndex : 0;
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportSize, setViewportSize] = useState({
+    width: 1200,
+    height: 800
+  });
+  useEffect(() => {
+    const updateViewportSize = () => {
+      const bounds = viewportRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      setViewportSize({
+        width: Math.max(320, bounds.width),
+        height: Math.max(480, bounds.height)
+      });
+    };
+    updateViewportSize();
+    if (typeof ResizeObserver === 'undefined' || !viewportRef.current) {
+      window.addEventListener('resize', updateViewportSize);
+      return () => window.removeEventListener('resize', updateViewportSize);
+    }
+    const resizeObserver = new ResizeObserver(updateViewportSize);
+    resizeObserver.observe(viewportRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+  const isZoomed = true;
+  const activePathIdx = focusedPathIndex !== null && focusedPathIndex !== undefined ? focusedPathIndex : currentPlayer.pathIndex !== null && currentPlayer.pathIndex !== undefined ? currentPlayer.pathIndex : 0;
   const neon = PATH_NEON_HEX[activePathIdx] ?? '#a855f7';
   const zoomedTilesOnPath = activePathTiles[activePathIdx] ?? [];
   const totalTilesZoomed = zoomedTilesOnPath.length || 30;
@@ -423,17 +478,28 @@ export function RoadView(props: RoadViewProps) {
     hopping
   } = useStepAnimation(currentPlayer.position, `${currentPlayer.id}-${activePathIdx}`);
   const clampedZoomedPos = Math.max(0, Math.min(zoomedDisplayPos, totalTilesZoomed - 1));
-  const overviewLaneCurves = useMemo(() => paths.map((_, laneIdx) => OVERVIEW_LANE_CURVES[laneIdx] ?? OVERVIEW_LANE_CURVES[0]), [paths]);
+  const worldWidth = Math.max(BOARD_MIN_WORLD_WIDTH_PX, viewportSize.width * BOARD_WORLD_WIDTH_MULTIPLIER);
+  const worldHeight = Math.max(BOARD_MIN_WORLD_HEIGHT_PX, viewportSize.height * BOARD_WORLD_HEIGHT_MULTIPLIER);
+  const overviewLaneCurves = useMemo(() => {
+    const worldLaneCurves = getWorldLaneCurves(worldWidth, worldHeight);
+    return paths.map((_, laneIdx) => worldLaneCurves[laneIdx] ?? worldLaneCurves[0]);
+  }, [paths, worldHeight, worldWidth]);
   const overviewSvgPaths = useMemo(() => overviewLaneCurves.map((curve) => toSvgLanePath(curve)), [overviewLaneCurves]);
   const activeLaneCurve = overviewLaneCurves[activePathIdx] ?? overviewLaneCurves[0];
   const activeLaneProgress = clampedZoomedPos / Math.max(1, totalTilesZoomed - 1);
   const activeLanePoint = getPointOnLaneCurve(activeLaneCurve, activeLaneProgress);
-  const cameraScale = isZoomed ? 1.38 : 1;
-  const cameraX = isZoomed ? `${(50 - activeLanePoint.x) * 0.95}%` : '0%';
-  const cameraY = isZoomed ? `${(58 - activeLanePoint.y) * 0.95}%` : '0%';
-  return <div className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
-      <motion.div className="absolute inset-0" style={{
-      transformOrigin: `${activeLanePoint.x}% ${activeLanePoint.y}%`
+  const cameraScale = 1.06;
+  const maxCameraX = viewportSize.width * 0.18;
+  const minCameraX = viewportSize.width - worldWidth - viewportSize.width * 0.18;
+  const maxCameraY = viewportSize.height * 0.2;
+  const minCameraY = viewportSize.height - worldHeight - viewportSize.height * 0.16;
+  const cameraX = clamp(viewportSize.width * 0.5 - activeLanePoint.x, minCameraX, maxCameraX);
+  const cameraY = clamp(viewportSize.height * CAMERA_Y_ANCHOR - activeLanePoint.y, minCameraY, maxCameraY);
+  return <div ref={viewportRef} className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
+      <motion.div className="absolute left-0 top-0" style={{
+      width: worldWidth,
+      height: worldHeight,
+      transformOrigin: `${activeLanePoint.x}px ${activeLanePoint.y}px`
     }} animate={{
       scale: cameraScale,
       x: cameraX,
@@ -510,7 +576,7 @@ export function RoadView(props: RoadViewProps) {
           boxShadow: '0 0 18px rgba(251,191,36,0.9), 0 0 42px rgba(251,191,36,0.45)'
         }} />
           </div>)}
-        <svg className="absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg className="absolute inset-0" viewBox={`0 0 ${worldWidth} ${worldHeight}`} preserveAspectRatio="none">
           <defs>
             <filter id="city-road-glow" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="1.4" result="blur" />
@@ -525,21 +591,21 @@ export function RoadView(props: RoadViewProps) {
           return <g key={`lane-road-${laneIdx}`}>
                 {overviewLaneCurves[laneIdx]?.slice(0, -1).map((start, segmentIdx) => {
               const end = overviewLaneCurves[laneIdx][segmentIdx + 1];
-              const segmentScale = getPerspectiveScale((start.y + end.y) / 2);
+              const segmentScale = getPerspectiveScale((start.y + end.y) / 2, worldHeight);
               const segmentPath = toSvgSegmentPath(start, end);
               return <g key={`road-segment-${laneIdx}-${segmentIdx}`}>
-                    <path d={segmentPath} fill="none" stroke="rgba(70,65,58,0.7)" strokeWidth={20 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(4,5,8,0.92)" strokeWidth={17.5 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(32,34,38,0.98)" strokeWidth={14 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke={`${laneColor}44`} strokeWidth={11.5 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth={0.55 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(70,65,58,0.72)" strokeWidth={92 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(4,5,8,0.94)" strokeWidth={80 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(32,34,38,0.98)" strokeWidth={66 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${laneColor}30`} strokeWidth={48 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(255,255,255,0.36)" strokeWidth={3 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
                   </g>;
             })}
-                <path d={lanePath} fill="none" stroke={`${laneColor}99`} strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1 4.4" />
-                <path d={lanePath} fill="none" stroke="rgba(250,204,21,0.5)" strokeWidth={0.42} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="0.4 6.2" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}99`} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12 34" />
+                <path d={lanePath} fill="none" stroke="rgba(250,204,21,0.5)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 48" />
                 {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
               const point = getPointOnLaneCurve(overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0], progress);
-              return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={0.38} fill={laneColor} opacity={0.52} />;
+              return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={6} fill={laneColor} opacity={0.5} />;
             })}
               </g>;
         })}
@@ -564,12 +630,12 @@ export function RoadView(props: RoadViewProps) {
         return <Fragment key={laneIdx}>
               {[0.2, 0.5, 0.8].map((progress) => {
             const crossingPoint = getPointOnLaneCurve(laneCurve, progress);
-            const crossingScale = getPerspectiveScale(crossingPoint.y);
+            const crossingScale = getPerspectiveScale(crossingPoint.y, worldHeight);
             return <div key={`crosswalk-${laneIdx}-${progress}`} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-sm opacity-70" style={{
-              left: `${crossingPoint.x}%`,
-              top: `${crossingPoint.y}%`,
-              width: 28 * crossingScale,
-              height: 7 * crossingScale,
+              left: crossingPoint.x,
+              top: crossingPoint.y,
+              width: 106 * crossingScale,
+              height: 16 * crossingScale,
               transform: `translate(-50%, -50%) rotate(${crossingPoint.angle}deg)`,
               backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.74) 0 2px, transparent 2px 5px)',
               zIndex: 17
@@ -578,18 +644,18 @@ export function RoadView(props: RoadViewProps) {
               {[0.28, 0.62].map((progress) => {
             const supportPoint = getPointOnLaneCurve(laneCurve, progress);
             return <div key={`bridge-support-${laneIdx}-${progress}`} className="absolute -translate-x-1/2 rounded-b-xl bg-slate-950/70" style={{
-              left: `${supportPoint.x}%`,
-              top: `${supportPoint.y + 2}%`,
-              width: 10 * getPerspectiveScale(supportPoint.y),
-              height: 28 * getPerspectiveScale(supportPoint.y),
+              left: supportPoint.x,
+              top: supportPoint.y + 48,
+              width: 20 * getPerspectiveScale(supportPoint.y, worldHeight),
+              height: 78 * getPerspectiveScale(supportPoint.y, worldHeight),
               boxShadow: '10px 16px 18px rgba(0,0,0,0.38)',
               zIndex: 5
             }} />;
           })}
               {(!isZoomed || laneIsActive) && <Fragment>
                   <div className="absolute -translate-x-1/2 rounded-sm border border-white/15 bg-slate-950/75 px-2.5 py-1 text-center text-[7px] font-black uppercase tracking-[0.18em] text-white/85" style={{
-              left: `${startPoint.x}%`,
-              top: `${Math.min(93, startPoint.y + 4)}%`,
+              left: startPoint.x,
+              top: Math.min(worldHeight - 54, startPoint.y + 72),
               boxShadow: `0 8px 18px rgba(0,0,0,0.42), 0 0 10px ${laneColor}4d`,
               color: laneColor,
               zIndex: 16
@@ -597,8 +663,8 @@ export function RoadView(props: RoadViewProps) {
                     {LANE_LABELS[laneIdx]}
                   </div>
                   <div className="absolute -translate-x-1/2 rounded-sm border border-white/12 bg-slate-950/65 px-2 py-0.5 text-center text-[6px] font-black uppercase tracking-[0.2em] text-white/55" style={{
-              left: `${finishPoint.x}%`,
-              top: `${Math.max(8, finishPoint.y - 5)}%`,
+              left: finishPoint.x,
+              top: Math.max(48, finishPoint.y - 72),
               boxShadow: `0 8px 18px rgba(0,0,0,0.35), 0 0 8px ${laneColor}33`,
               zIndex: 16
             }}>
@@ -609,24 +675,26 @@ export function RoadView(props: RoadViewProps) {
             const progress = idx / Math.max(1, totalTilesLane - 1);
             const point = getPointOnLaneCurve(laneCurve, progress);
             const distanceFromCurrent = laneIsActive ? idx - clampedZoomedPos : 999;
-            const showInZoom = !isZoomed || !laneIsActive || Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE + 2;
-            if (!showInZoom) return null;
-            const showDetailedCard = isZoomed && laneIsActive && Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE;
-            const isCurrent = showDetailedCard && distanceFromCurrent === 0;
             const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
+            const isNearbyOtherLaneCheckpoint = !laneIsActive && isCheckpoint && Math.abs(point.y - activeLanePoint.y) < viewportSize.height * NEARBY_OTHER_LANE_CARD_WINDOW;
+            const showInZoom = laneIsActive ? Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE + 1 : isNearbyOtherLaneCheckpoint;
+            if (!showInZoom) return null;
+            const showDetailedCard = laneIsActive && Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE;
+            const isCurrent = showDetailedCard && distanceFromCurrent === 0;
             const tile = getTileById(tileId);
             const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
             const TileIcon = styleInfo.icon;
-            const tileRotate = showDetailedCard ? 0 : Math.max(-26, Math.min(26, point.angle));
-            const perspectiveScale = getPerspectiveScale(point.y);
-            const overviewWidth = Math.round((isCheckpoint ? 48 : 36) * perspectiveScale);
-            const overviewHeight = Math.round((isCheckpoint ? 24 : 17) * perspectiveScale);
-            const showOverviewText = !showDetailedCard && (isCheckpoint || point.y > 68);
-            const width = showDetailedCard ? 176 : overviewWidth;
+            const tileRotate = getReadableLaneTilt(point.angle, showDetailedCard ? 6 : 14);
+            const perspectiveScale = getPerspectiveScale(point.y, worldHeight);
+            const overviewWidth = Math.round((isCheckpoint ? 82 : 54) * perspectiveScale);
+            const overviewHeight = Math.round((isCheckpoint ? 38 : 24) * perspectiveScale);
+            const normalizedY = point.y / worldHeight;
+            const showOverviewText = !showDetailedCard && (isCheckpoint || normalizedY > 0.72);
+            const width = showDetailedCard ? 188 : overviewWidth;
             const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : overviewHeight;
             return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? 'rounded-xl px-3 py-2 text-center' : 'rounded-sm'} flex items-center justify-center overflow-hidden`} style={{
-              left: `${point.x}%`,
-              top: `${point.y}%`,
+              left: point.x,
+              top: point.y,
               width,
               height,
               transform: `translate(-50%, -50%) rotate(${tileRotate}deg)`,
@@ -681,14 +749,14 @@ export function RoadView(props: RoadViewProps) {
             const xOffsetPx = (stackIdx - (playersOnLane.length - 1) / 2) * 16;
             const isActive = players[currentPlayerIndex]?.id === p.id;
             return <motion.div key={p.id} className="absolute" style={{
-              left: `${point.x}%`,
-              top: `${point.y}%`,
+              left: point.x,
+              top: point.y,
               transform: `translate(calc(-50% + ${xOffsetPx}px), -58%)`,
               filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined,
               zIndex: 30
             }} animate={{
-              left: `${point.x}%`,
-              top: `${point.y}%`
+              left: point.x,
+              top: point.y
             }} transition={{
               duration: HOP_DURATION_MS / 1000,
               ease: [0.22, 1, 0.36, 1]
@@ -701,10 +769,10 @@ export function RoadView(props: RoadViewProps) {
 
         {isZoomed && <Fragment>
             <motion.div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" style={{
-          left: `${activeLanePoint.x}%`,
-          top: `${activeLanePoint.y}%`,
-          width: 142,
-          height: 32,
+          left: activeLanePoint.x,
+          top: activeLanePoint.y,
+          width: 172,
+          height: 42,
           background: `radial-gradient(circle, ${neon}88 0%, ${neon}22 60%, transparent 100%)`,
           boxShadow: `0 0 20px ${neon}88`,
           zIndex: 34
@@ -715,19 +783,19 @@ export function RoadView(props: RoadViewProps) {
           duration: hopping ? HOP_DURATION_MS * 0.72 / 1000 : 1.5
         }} />
             <motion.div className="absolute" style={{
-          left: `${activeLanePoint.x}%`,
-          top: `${activeLanePoint.y}%`,
+          left: activeLanePoint.x,
+          top: activeLanePoint.y,
           transform: 'translate(-50%, -100%)',
           filter: `drop-shadow(0 0 28px ${neon}cc)`,
           zIndex: 40
         }} animate={{
-          left: `${activeLanePoint.x}%`,
-          top: `${activeLanePoint.y}%`
+          left: activeLanePoint.x,
+          top: activeLanePoint.y
         }} transition={{
           duration: HOP_DURATION_MS / 1000,
           ease: [0.22, 1, 0.36, 1]
         }}>
-              <Pawn3D color={PAWN_COLORS[currentPlayer.color] || PAWN_COLORS.purple} avatar={currentPlayer.avatar} letter={currentPlayer.name.charAt(0).toUpperCase()} scale={1} hopping={hopping} />
+              <Pawn3D color={PAWN_COLORS[currentPlayer.color] || PAWN_COLORS.purple} avatar={currentPlayer.avatar} letter={currentPlayer.name.charAt(0).toUpperCase()} scale={0.72} hopping={hopping} />
             </motion.div>
           </Fragment>}
       </motion.div>
