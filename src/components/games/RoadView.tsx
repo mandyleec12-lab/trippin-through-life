@@ -54,14 +54,14 @@ const PAWN_COLORS: Record<string, string> = {
   coral: 'from-orange-400 via-rose-500 to-rose-700'
 };
 const HOP_DURATION_MS = 440;
-const ZOOMED_CARD_HEIGHT_PX = 78;
-const ZOOMED_VISIBLE_CARD_RANGE = 2;
+const ACTIVE_CARD_AHEAD_RANGE = 4;
+const ACTIVE_DETAILED_AHEAD_RANGE = 3;
 const BOARD_MIN_WORLD_WIDTH_PX = 1180;
 const BOARD_MIN_WORLD_HEIGHT_PX = 3300;
 const BOARD_WORLD_WIDTH_MULTIPLIER = 2.05;
 const BOARD_WORLD_HEIGHT_MULTIPLIER = 4.6;
-const CAMERA_Y_ANCHOR = 0.56;
-const CAMERA_TILT_DEG = 11;
+const CAMERA_Y_ANCHOR = 0.76;
+const CAMERA_TILT_DEG = 54;
 const CAMERA_ROLL_DEG = -1.25;
 const NEARBY_OTHER_LANE_CARD_WINDOW = 0.34;
 type LanePoint = {
@@ -493,16 +493,16 @@ export function RoadView(props: RoadViewProps) {
   const activeLaneCurve = overviewLaneCurves[activePathIdx] ?? overviewLaneCurves[0];
   const activeLaneProgress = clampedZoomedPos / Math.max(1, totalTilesZoomed - 1);
   const activeLanePoint = getPointOnLaneCurve(activeLaneCurve, activeLaneProgress);
-  const cameraScale = 1.06;
-  const maxCameraX = viewportSize.width * 0.18;
+  const cameraScale = 1.24;
+  const maxCameraX = viewportSize.width * 0.2;
   const minCameraX = viewportSize.width - worldWidth - viewportSize.width * 0.18;
-  const maxCameraY = viewportSize.height * 0.2;
+  const maxCameraY = viewportSize.height * 0.24;
   const minCameraY = viewportSize.height - worldHeight - viewportSize.height * 0.16;
   const cameraX = clamp(viewportSize.width * 0.5 - activeLanePoint.x, minCameraX, maxCameraX);
   const cameraY = clamp(viewportSize.height * CAMERA_Y_ANCHOR - activeLanePoint.y, minCameraY, maxCameraY);
   return <div ref={viewportRef} className="absolute inset-0 overflow-hidden z-[5] pointer-events-none" style={{
-    perspective: 1450,
-    perspectiveOrigin: '50% 62%'
+    perspective: 980,
+    perspectiveOrigin: '50% 78%'
   }}>
       <motion.div className="absolute left-0 top-0" style={{
       width: worldWidth,
@@ -694,9 +694,9 @@ export function RoadView(props: RoadViewProps) {
             const distanceFromCurrent = laneIsActive ? idx - clampedZoomedPos : 999;
             const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
             const isNearbyOtherLaneCheckpoint = !laneIsActive && isCheckpoint && Math.abs(point.y - activeLanePoint.y) < viewportSize.height * NEARBY_OTHER_LANE_CARD_WINDOW;
-            const showInZoom = laneIsActive ? Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE + 1 : isNearbyOtherLaneCheckpoint;
+            const showInZoom = laneIsActive ? distanceFromCurrent >= 0 && distanceFromCurrent <= ACTIVE_CARD_AHEAD_RANGE : isNearbyOtherLaneCheckpoint;
             if (!showInZoom) return null;
-            const showDetailedCard = laneIsActive && Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE;
+            const showDetailedCard = laneIsActive && distanceFromCurrent <= ACTIVE_DETAILED_AHEAD_RANGE;
             const isCurrent = showDetailedCard && distanceFromCurrent === 0;
             const tile = getTileById(tileId);
             const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
@@ -707,14 +707,15 @@ export function RoadView(props: RoadViewProps) {
             const overviewHeight = Math.round((isCheckpoint ? 38 : 24) * perspectiveScale);
             const normalizedY = point.y / worldHeight;
             const showOverviewText = !showDetailedCard && (isCheckpoint || normalizedY > 0.72);
-            const width = showDetailedCard ? 188 : overviewWidth;
-            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : overviewHeight;
+            const activeCardScale = laneIsActive ? clamp(1.1 - Math.max(0, distanceFromCurrent) * 0.1, 0.72, 1.12) : 1;
+            const width = showDetailedCard ? Math.round(208 * activeCardScale) : overviewWidth;
+            const height = showDetailedCard ? Math.round(92 * activeCardScale) : overviewHeight;
             return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? 'rounded-xl px-3 py-2 text-center' : 'rounded-sm'} flex items-center justify-center overflow-hidden`} style={{
               left: point.x,
               top: point.y,
               width,
               height,
-              transform: `translate(-50%, -50%) translateZ(${showDetailedCard ? 46 : 22}px) rotate(${tileRotate}deg) rotateX(${showDetailedCard ? -CAMERA_TILT_DEG : -4}deg)`,
+              transform: `translate(-50%, -50%) translateZ(${showDetailedCard ? 26 : 16}px) rotate(${tileRotate}deg) rotateX(${showDetailedCard ? -28 : -10}deg)`,
               transformOrigin: 'center center',
               borderColor: isCurrent ? neon : `${laneColor}${showDetailedCard ? '88' : '66'}`,
               background: showDetailedCard ? `linear-gradient(135deg, rgba(42,43,46,0.98), rgba(25,27,31,0.98) 58%, ${laneColor}2b)` : isCheckpoint ? `linear-gradient(180deg, rgba(58,57,55,0.96), rgba(30,32,35,0.98))` : `linear-gradient(180deg, rgba(49,50,52,0.96), rgba(28,30,33,0.98))`,
@@ -816,8 +817,29 @@ export function RoadView(props: RoadViewProps) {
             </motion.div>
           </Fragment>}
       </motion.div>
+      {['left', 'right'].map((side) => <div key={`foreground-${side}`} className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-[15%] pointer-events-none overflow-hidden`} style={{
+      background: side === 'left' ? 'linear-gradient(90deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)' : 'linear-gradient(270deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)',
+      maskImage: 'linear-gradient(180deg, transparent 0%, black 12%, black 92%, transparent 100%)',
+      WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 12%, black 92%, transparent 100%)',
+      zIndex: 1
+    }}>
+          {Array.from({ length: 8 }).map((_, index) => <span key={index} className="absolute rounded-[2px]" style={{
+        left: side === 'left' ? `${12 + index % 3 * 22}%` : `${18 + index % 3 * 20}%`,
+        top: `${12 + index * 10}%`,
+        width: `${18 + index % 2 * 10}px`,
+        height: `${3 + index % 3}px`,
+        background: index % 2 === 0 ? 'rgba(244,114,182,0.78)' : 'rgba(56,189,248,0.72)',
+        boxShadow: index % 2 === 0 ? '0 0 16px rgba(244,114,182,0.9)' : '0 0 16px rgba(56,189,248,0.85)'
+      }} />)}
+        </div>)}
+      <div className="absolute inset-x-0 bottom-0 h-[34%] pointer-events-none" style={{
+      background: 'linear-gradient(90deg, rgba(250,204,21,0.42) 0 2px, transparent 2px 18%, transparent 82%, rgba(250,204,21,0.42) 82% calc(82% + 2px), transparent calc(82% + 2px)), linear-gradient(180deg, transparent, rgba(0,0,0,0.34))',
+      clipPath: 'polygon(7% 100%, 27% 0, 73% 0, 93% 100%)',
+      opacity: 0.72,
+      zIndex: 1
+    }} />
       <div className="absolute inset-0 pointer-events-none" style={{
-      background: 'linear-gradient(180deg, rgba(5,8,18,0.18) 0%, transparent 28%, transparent 62%, rgba(2,4,10,0.36) 100%), radial-gradient(ellipse at 50% 68%, transparent 0%, transparent 42%, rgba(0,0,0,0.28) 100%)',
+      background: 'linear-gradient(180deg, rgba(5,8,18,0.34) 0%, rgba(5,8,18,0.08) 22%, transparent 48%, rgba(2,4,10,0.44) 100%), radial-gradient(ellipse at 50% 72%, transparent 0%, transparent 38%, rgba(0,0,0,0.34) 100%)',
       zIndex: 2
     }} />
 
