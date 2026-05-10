@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, Fragment } from 'react';
+import React, { useEffect, useState, useRef, Fragment, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 interface Player {
   id: string;
@@ -53,26 +53,140 @@ const PAWN_COLORS: Record<string, string> = {
   gold: 'from-amber-400 via-amber-500 to-amber-700',
   coral: 'from-orange-400 via-rose-500 to-rose-700'
 };
-// Lane X positions on the cinematic city background, in OVERVIEW mode.
-// Three readable starting lanes leave the center open for shared districts.
-const OVERVIEW_LANE_X: Record<number, number> = {
-  0: 26,
-  1: 50,
-  2: 74
-};
 // In zoomed mode the active lane is centered on screen.
 const ZOOMED_LANE_X = 50;
 const HOP_DURATION_MS = 440;
-// Vertical bounds for the focused lane in zoomed view.
-const ZOOMED_LANE_TOP_PCT = 12;
-const ZOOMED_LANE_BOTTOM_PCT = 86;
 const ZOOMED_ACTIVE_CARD_Y_PCT = 62;
 const ZOOMED_CARD_STEP_PX = 118;
 const ZOOMED_CARD_HEIGHT_PX = 78;
 const ZOOMED_VISIBLE_CARD_RANGE = 2;
-// In overview, every lane spans this vertical range so all pawns stay visible.
-const OVERVIEW_LANE_TOP_PCT = 18;
-const OVERVIEW_LANE_BOTTOM_PCT = 86;
+type LanePoint = {
+  x: number;
+  y: number;
+};
+const OVERVIEW_LANE_CURVES: Record<number, LanePoint[]> = {
+  // Bottom -> top. Curves intentionally weave to mimic elevated city lanes.
+  0: [{
+    x: 26,
+    y: 86
+  }, {
+    x: 30,
+    y: 74
+  }, {
+    x: 44,
+    y: 58
+  }, {
+    x: 39,
+    y: 44
+  }, {
+    x: 53,
+    y: 28
+  }, {
+    x: 47,
+    y: 14
+  }],
+  1: [{
+    x: 50,
+    y: 86
+  }, {
+    x: 45,
+    y: 72
+  }, {
+    x: 34,
+    y: 56
+  }, {
+    x: 53,
+    y: 42
+  }, {
+    x: 41,
+    y: 26
+  }, {
+    x: 56,
+    y: 14
+  }],
+  2: [{
+    x: 74,
+    y: 86
+  }, {
+    x: 67,
+    y: 72
+  }, {
+    x: 55,
+    y: 57
+  }, {
+    x: 63,
+    y: 43
+  }, {
+    x: 47,
+    y: 27
+  }, {
+    x: 59,
+    y: 14
+  }]
+};
+const toSvgLanePath = (points: LanePoint[]) => {
+  if (!points.length) return '';
+  return points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+};
+const getPointOnLaneCurve = (points: LanePoint[], progress: number) => {
+  if (points.length === 0) {
+    return {
+      x: 50,
+      y: 50,
+      angle: -90
+    };
+  }
+  if (points.length === 1) {
+    return {
+      x: points[0].x,
+      y: points[0].y,
+      angle: -90
+    };
+  }
+  const clampedProgress = Math.max(0, Math.min(progress, 1));
+  const segmentLengths = [];
+  let totalLength = 0;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const start = points[i];
+    const end = points[i + 1];
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    segmentLengths.push(length);
+    totalLength += length;
+  }
+  if (totalLength <= 0) {
+    return {
+      x: points[0].x,
+      y: points[0].y,
+      angle: -90
+    };
+  }
+  const targetDistance = clampedProgress * totalLength;
+  let walked = 0;
+  for (let i = 0; i < segmentLengths.length; i += 1) {
+    const segmentLength = segmentLengths[i];
+    const nextWalked = walked + segmentLength;
+    if (targetDistance <= nextWalked || i === segmentLengths.length - 1) {
+      const start = points[i];
+      const end = points[i + 1];
+      const localT = segmentLength <= 0 ? 0 : (targetDistance - walked) / segmentLength;
+      const x = start.x + (end.x - start.x) * localT;
+      const y = start.y + (end.y - start.y) * localT;
+      const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
+      return {
+        x,
+        y,
+        angle
+      };
+    }
+    walked = nextWalked;
+  }
+  const fallback = points[points.length - 1];
+  return {
+    x: fallback.x,
+    y: fallback.y,
+    angle: -90
+  };
+};
 // ─────────────────────────────────────────────────────────────────────────────
 // Pawn3D — a polished board token used in zoomed view.
 function Pawn3D({
@@ -250,12 +364,6 @@ function useStepAnimation(targetPos: number, resetKey: string): {
   };
 }
 // ─────────────────────────────────────────────────────────────────────────────
-const getLaneYPct = (position: number, totalTiles: number, topPct: number, bottomPct: number) => {
-  const clampedPos = Math.max(0, Math.min(position, Math.max(0, totalTiles - 1)));
-  const progress = clampedPos / Math.max(1, totalTiles - 1);
-  return bottomPct - progress * (bottomPct - topPct);
-};
-
 const LANE_LABELS = ['College', 'High School / GED', 'Dropout'];
 
 // MAIN COMPONENT
@@ -282,6 +390,8 @@ export function RoadView(props: RoadViewProps) {
   const clampedZoomedPos = Math.max(0, Math.min(zoomedDisplayPos, totalTilesZoomed - 1));
   const zoomedPawnYPct = ZOOMED_ACTIVE_CARD_Y_PCT;
   const zoomedPawnLandingTop = `calc(${zoomedPawnYPct}% - ${ZOOMED_CARD_HEIGHT_PX / 2 - 4}px)`;
+  const overviewLaneCurves = useMemo(() => paths.map((_, laneIdx) => OVERVIEW_LANE_CURVES[laneIdx] ?? OVERVIEW_LANE_CURVES[0]), [paths]);
+  const overviewSvgPaths = useMemo(() => overviewLaneCurves.map((curve) => toSvgLanePath(curve)), [overviewLaneCurves]);
   return <div className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
       <AnimatePresence>
         {!isZoomed && <motion.div key="overview" initial={{
@@ -301,63 +411,80 @@ export function RoadView(props: RoadViewProps) {
             <div className="absolute left-[10%] right-[10%] top-[16%] bottom-[12%] rounded-[2rem] opacity-45" style={{
           backgroundImage: 'repeating-linear-gradient(160deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 12px)'
         }} />
+            <div className="absolute left-[14%] right-[14%] top-[19%] bottom-[16%] rounded-[1.7rem] border border-white/5" style={{
+          background: 'linear-gradient(180deg, rgba(18,18,34,0.55), rgba(12,12,24,0.58))'
+        }} />
+            <svg className="absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {overviewSvgPaths.map((lanePath, laneIdx) => {
+            const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
+            return <g key={`lane-road-${laneIdx}`}>
+                    <path d={lanePath} fill="none" stroke="rgba(8,8,20,0.9)" strokeWidth={14} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={lanePath} fill="none" stroke={`${laneColor}55`} strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.5 4" />
+                  </g>;
+          })}
+            </svg>
+            {/* Small overpass hints where lanes weave */}
+            <div className="absolute left-[46%] top-[54%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35" style={{
+          boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+        }} />
+            <div className="absolute left-[52%] top-[38%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35" style={{
+          boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+        }} />
             {paths.map((_, laneIdx) => {
-          const laneX = OVERVIEW_LANE_X[laneIdx];
+          const laneCurve = overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0];
           const tilesOnLane = activePathTiles[laneIdx] ?? [];
           const totalTilesLane = tilesOnLane.length || 30;
           const playersOnLane = players.filter((p) => p.pathIndex === laneIdx);
           const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
           const laneIsActive = currentPlayer.pathIndex === laneIdx;
           return <Fragment key={laneIdx}>
-                  <div className="absolute rounded-[2rem] border border-white/10" style={{
-              left: `${laneX}%`,
-              top: `${OVERVIEW_LANE_TOP_PCT - 3}%`,
-              bottom: `${100 - OVERVIEW_LANE_BOTTOM_PCT + 2}%`,
-              width: 74,
-              transform: 'translateX(-50%)',
-              background: 'linear-gradient(180deg, rgba(4,4,16,0.62), rgba(10,10,24,0.62))',
-              boxShadow: laneIsActive ? `0 0 20px ${laneColor}55` : '0 0 10px rgba(0,0,0,0.45)'
-            }} />
                   {tilesOnLane.map((tileId, idx) => {
-              const yPct = getLaneYPct(idx, totalTilesLane, OVERVIEW_LANE_TOP_PCT, OVERVIEW_LANE_BOTTOM_PCT);
-              const nextYPct = idx < totalTilesLane - 1 ? getLaneYPct(idx + 1, totalTilesLane, OVERVIEW_LANE_TOP_PCT, OVERVIEW_LANE_BOTTOM_PCT) : null;
+              const progress = idx / Math.max(1, totalTilesLane - 1);
+              const point = getPointOnLaneCurve(laneCurve, progress);
               const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
               const tile = getTileById(tileId);
               const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
-              return <Fragment key={`${laneIdx}-${tileId}-${idx}`}>
-                        {nextYPct !== null && <div className="absolute left-1/2 -translate-x-1/2 rounded-full" style={{
-                  left: `${laneX}%`,
-                  top: `${nextYPct}%`,
-                  height: `${Math.max(0.8, yPct - nextYPct)}%`,
-                  width: 4,
-                  background: `linear-gradient(180deg, ${laneColor}66, ${laneColor}24)`,
-                  boxShadow: `0 0 8px ${laneColor}66`
-                }} />}
-                        <div className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border ${styleInfo.border}`} style={{
-                  left: `${laneX}%`,
-                  top: `${yPct}%`,
-                  width: isCheckpoint ? 28 : 22,
-                  height: isCheckpoint ? 14 : 10,
-                  background: 'rgba(18,18,34,0.9)',
-                  boxShadow: isCheckpoint ? `0 0 12px ${laneColor}88` : `0 0 6px ${laneColor}55`
-                }} />
-                      </Fragment>;
+              return <div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute rounded-lg border ${styleInfo.border}`} style={{
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                width: isCheckpoint ? 30 : 24,
+                height: isCheckpoint ? 15 : 11,
+                transform: `translate(-50%, -50%) rotate(${point.angle}deg)`,
+                transformOrigin: 'center center',
+                zIndex: 14,
+                background: 'rgba(18,18,34,0.9)',
+                boxShadow: isCheckpoint ? `0 0 12px ${laneColor}88` : `0 0 6px ${laneColor}55`
+              }} />;
             })}
+
+                  {laneIsActive && <div className="absolute rounded-full" style={{
+              left: `${laneCurve[0].x}%`,
+              top: `${laneCurve[0].y}%`,
+              width: 60,
+              height: 28,
+              transform: 'translate(-50%, -50%)',
+              border: `1px solid ${laneColor}66`,
+              background: `${laneColor}22`,
+              boxShadow: `0 0 12px ${laneColor}55`
+            }} />}
 
                   {playersOnLane.map((p, stackIdx) => {
               const lanePos = p.id === currentPlayer.id ? zoomedDisplayPos : p.position;
               const clampedLanePos = Math.max(0, Math.min(lanePos, totalTilesLane - 1));
-              const yPct = getLaneYPct(clampedLanePos, totalTilesLane, OVERVIEW_LANE_TOP_PCT, OVERVIEW_LANE_BOTTOM_PCT);
+              const playerProgress = clampedLanePos / Math.max(1, totalTilesLane - 1);
+              const point = getPointOnLaneCurve(laneCurve, playerProgress);
               const xOffsetPx = (stackIdx - (playersOnLane.length - 1) / 2) * 18;
               const isActive = players[currentPlayerIndex]?.id === p.id;
               return <motion.div key={p.id} className="absolute" style={{
-                left: `${laneX}%`,
-                top: `${yPct}%`,
-                transform: `translate(calc(-50% + ${xOffsetPx}px), -56%)`,
-                filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                transform: `translate(calc(-50% + ${xOffsetPx}px), -58%)`,
+                filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined,
+                zIndex: 18
               }} animate={{
-                left: `${laneX}%`,
-                top: `${yPct}%`
+                left: `${point.x}%`,
+                top: `${point.y}%`
               }} transition={{
                 duration: HOP_DURATION_MS / 1000,
                 ease: [0.22, 1, 0.36, 1]
