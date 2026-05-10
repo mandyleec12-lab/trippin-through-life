@@ -1,0 +1,150 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700&family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@layer utilities {
+  .shimmer-text {
+    background: linear-gradient(
+      to right,
+      #E84B9F 20%,
+      #F9A8D4 40%,
+      #F9A8D4 60%,
+      #E84B9F 80%
+    );
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shimmer 4s linear infinite;
+  }
+  .glitter-text {
+    background: linear-gradient(
+      to right,
+      #D63384 0%,
+      #F472B6 25%,
+      #E84B9F 50%,
+      #F472B6 75%,
+      #D63384 100%
+    );
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+  .glass-panel {
+    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-xl;
+  }
+}
+body {
+  background-color: #FFF5F9; /* blush-50 */
+  color: #4A2D52; /* plum-700 */
+  font-family: "Quicksand", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+body ::selection {
+  background-color: #FFD1E3; /* blush-200 */
+  color: #2D1533; /* plum-900 */
+}
+html {
+  scroll-behavior: smooth;
+}
+/* MailerLite Embedded Form Overrides */
+.ml-embedded {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+.ml-embedded .ml-form-embedWrapper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+}
+.ml-embedded .ml-form-embedBody {
+  padding: 0 !important;
+  background: transparent !important;
+}
+.ml-embedded .ml-form-embedBody .ml-form-embedContent {
+  display: none !important;
+}
+.ml-embedded .ml-form-formContent {
+  padding: 0 !important;
+}
+.ml-embedded .ml-form-fieldRow {
+  margin-bottom: 1rem !important;
+}
+.ml-embedded .ml-form-fieldRow input[type="email"],
+.ml-embedded .ml-form-fieldRow input[type="text"] {
+  width: 100% !important;
+  padding: 1rem 1.5rem !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #4a1942 !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  outline: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+.ml-embedded .ml-form-fieldRow input[type="email"]::placeholder,
+.ml-embedded .ml-form-fieldRow input[type="text"]::placeholder {
+  color: #9b6b8e !important;
+}
+.ml-embedded .ml-form-fieldRow input[type="email"]:focus,
+.ml-embedded .ml-form-fieldRow input[type="text"]:focus {
+  background: white !important;
+  border-color: #9b6b8e !important;
+  box-shadow: 0 0 0 2px rgba(155, 107, 142, 0.3) !important;
+}
+.ml-embedded .ml-form-embedSubmit button,
+.ml-embedded .ml-form-embedSubmit .primary {
+  width: 100% !important;
+  padding: 1rem 2rem !important;
+  border-radius: 0.75rem !important;
+  background: #4a1942 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 1.125rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  font-family: inherit !important;
+}
+.ml-embedded .ml-form-embedSubmit button:hover,
+.ml-embedded .ml-form-embedSubmit .primary:hover {
+  background: #2d1533 !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+}
+.ml-embedded .ml-form-successBody {
+  padding: 1.5rem !important;
+  text-align: center !important;
+}
+.ml-embedded .ml-form-successBody .ml-form-successContent h4 {
+  color: #4a1942 !important;
+  font-weight: 700 !important;
+  font-size: 1.25rem !important;
+  font-family: inherit !important;
+}
+.ml-embedded .ml-form-successBody .ml-form-successContent p {
+  color: #6b3a5e !important;
+  font-family: inherit !important;
+}
+.ml-embedded .ml-form-embedBody .ml-form-checkboxRow {
+  color: #6b3a5e !important;
+}
+.ml-embedded .ml-form-embedBody .ml-form-checkboxRow a {
+  color: #D63384 !important;
+}
