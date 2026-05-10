@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, Fragment, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 interface Player {
   id: string;
   name: string;
@@ -53,11 +53,7 @@ const PAWN_COLORS: Record<string, string> = {
   gold: 'from-amber-400 via-amber-500 to-amber-700',
   coral: 'from-orange-400 via-rose-500 to-rose-700'
 };
-// In zoomed mode the active lane is centered on screen.
-const ZOOMED_LANE_X = 50;
 const HOP_DURATION_MS = 440;
-const ZOOMED_ACTIVE_CARD_Y_PCT = 62;
-const ZOOMED_CARD_STEP_PX = 118;
 const ZOOMED_CARD_HEIGHT_PX = 78;
 const ZOOMED_VISIBLE_CARD_RANGE = 2;
 type LanePoint = {
@@ -388,286 +384,222 @@ export function RoadView(props: RoadViewProps) {
     hopping
   } = useStepAnimation(currentPlayer.position, `${currentPlayer.id}-${activePathIdx}`);
   const clampedZoomedPos = Math.max(0, Math.min(zoomedDisplayPos, totalTilesZoomed - 1));
-  const zoomedPawnYPct = ZOOMED_ACTIVE_CARD_Y_PCT;
-  const zoomedPawnLandingTop = `calc(${zoomedPawnYPct}% - ${ZOOMED_CARD_HEIGHT_PX / 2 - 4}px)`;
   const overviewLaneCurves = useMemo(() => paths.map((_, laneIdx) => OVERVIEW_LANE_CURVES[laneIdx] ?? OVERVIEW_LANE_CURVES[0]), [paths]);
   const overviewSvgPaths = useMemo(() => overviewLaneCurves.map((curve) => toSvgLanePath(curve)), [overviewLaneCurves]);
+  const activeLaneCurve = overviewLaneCurves[activePathIdx] ?? overviewLaneCurves[0];
+  const activeLaneProgress = clampedZoomedPos / Math.max(1, totalTilesZoomed - 1);
+  const activeLanePoint = getPointOnLaneCurve(activeLaneCurve, activeLaneProgress);
+  const cameraScale = isZoomed ? 1.38 : 1;
+  const cameraX = isZoomed ? `${(50 - activeLanePoint.x) * 0.95}%` : '0%';
+  const cameraY = isZoomed ? `${(58 - activeLanePoint.y) * 0.95}%` : '0%';
   return <div className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
-      <AnimatePresence>
-        {!isZoomed && <motion.div key="overview" initial={{
-        opacity: 0
-      }} animate={{
-        opacity: 1
-      }} exit={{
-        opacity: 0
-      }} transition={{
-        duration: 0.45
-      }} className="absolute inset-0">
-            {/* Board depth and subtle texture so lanes feel grounded */}
-            <div className="absolute left-[8%] right-[8%] top-[13%] bottom-[10%] rounded-[2.2rem] border border-white/10" style={{
-          background: 'linear-gradient(180deg, rgba(10,8,28,0.72) 0%, rgba(10,10,20,0.78) 100%)',
-          boxShadow: 'inset 0 0 60px rgba(0,0,0,0.45), 0 18px 44px rgba(0,0,0,0.35)'
-        }} />
-            <div className="absolute left-[10%] right-[10%] top-[16%] bottom-[12%] rounded-[2rem] opacity-45" style={{
-          backgroundImage: 'repeating-linear-gradient(160deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 12px)'
-        }} />
-            <div className="absolute left-[14%] right-[14%] top-[19%] bottom-[16%] rounded-[1.7rem] border border-white/5" style={{
-          background: 'linear-gradient(180deg, rgba(18,18,34,0.55), rgba(12,12,24,0.58))'
-        }} />
-            <svg className="absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
-              {overviewSvgPaths.map((lanePath, laneIdx) => {
-            const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
-            return <g key={`lane-road-${laneIdx}`}>
-                    <path d={lanePath} fill="none" stroke="rgba(8,8,20,0.9)" strokeWidth={14} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={lanePath} fill="none" stroke={`${laneColor}55`} strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.5 4" />
-                  </g>;
-          })}
-            </svg>
-            {/* Small overpass hints where lanes weave */}
-            <div className="absolute left-[46%] top-[54%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35" style={{
-          boxShadow: '0 0 10px rgba(255,255,255,0.14)'
-        }} />
-            <div className="absolute left-[52%] top-[38%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/35" style={{
-          boxShadow: '0 0 10px rgba(255,255,255,0.14)'
-        }} />
-            {paths.map((_, laneIdx) => {
-          const laneCurve = overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0];
-          const tilesOnLane = activePathTiles[laneIdx] ?? [];
-          const totalTilesLane = tilesOnLane.length || 30;
-          const playersOnLane = players.filter((p) => p.pathIndex === laneIdx);
+      <motion.div className="absolute inset-0" style={{
+      transformOrigin: `${activeLanePoint.x}% ${activeLanePoint.y}%`
+    }} animate={{
+      scale: cameraScale,
+      x: cameraX,
+      y: cameraY
+    }} transition={{
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1]
+    }}>
+        {/* Shared board world for both overview and zoom */}
+        <div className="absolute left-[8%] right-[8%] top-[11%] bottom-[9%] rounded-[2.4rem] border border-white/10" style={{
+        background: 'linear-gradient(180deg, rgba(10,8,28,0.72) 0%, rgba(10,10,20,0.82) 100%)',
+        boxShadow: 'inset 0 0 60px rgba(0,0,0,0.45), 0 18px 44px rgba(0,0,0,0.35)'
+      }} />
+        <div className="absolute left-[9%] right-[9%] top-[14%] bottom-[11%] rounded-[2rem] opacity-38" style={{
+        backgroundImage: 'repeating-linear-gradient(155deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1px, transparent 1px, transparent 14px)'
+      }} />
+        <div className="absolute left-[12%] right-[12%] top-[16%] bottom-[14%] rounded-[1.8rem] border border-white/6" style={{
+        background: 'linear-gradient(180deg, rgba(16,16,30,0.55), rgba(10,10,22,0.6))'
+      }} />
+        <svg className="absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {overviewSvgPaths.map((lanePath, laneIdx) => {
           const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
-          const laneIsActive = currentPlayer.pathIndex === laneIdx;
-          return <Fragment key={laneIdx}>
-                  {tilesOnLane.map((tileId, idx) => {
-              const progress = idx / Math.max(1, totalTilesLane - 1);
-              const point = getPointOnLaneCurve(laneCurve, progress);
-              const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
-              const tile = getTileById(tileId);
-              const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
-              return <div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute rounded-lg border ${styleInfo.border}`} style={{
-                left: `${point.x}%`,
-                top: `${point.y}%`,
-                width: isCheckpoint ? 30 : 24,
-                height: isCheckpoint ? 15 : 11,
-                transform: `translate(-50%, -50%) rotate(${point.angle}deg)`,
-                transformOrigin: 'center center',
-                zIndex: 14,
-                background: 'rgba(18,18,34,0.9)',
-                boxShadow: isCheckpoint ? `0 0 12px ${laneColor}88` : `0 0 6px ${laneColor}55`
-              }} />;
-            })}
-
-                  {laneIsActive && <div className="absolute rounded-full" style={{
-              left: `${laneCurve[0].x}%`,
-              top: `${laneCurve[0].y}%`,
-              width: 60,
-              height: 28,
-              transform: 'translate(-50%, -50%)',
-              border: `1px solid ${laneColor}66`,
-              background: `${laneColor}22`,
-              boxShadow: `0 0 12px ${laneColor}55`
-            }} />}
-
-                  {playersOnLane.map((p, stackIdx) => {
-              const lanePos = p.id === currentPlayer.id ? zoomedDisplayPos : p.position;
-              const clampedLanePos = Math.max(0, Math.min(lanePos, totalTilesLane - 1));
-              const playerProgress = clampedLanePos / Math.max(1, totalTilesLane - 1);
-              const point = getPointOnLaneCurve(laneCurve, playerProgress);
-              const xOffsetPx = (stackIdx - (playersOnLane.length - 1) / 2) * 18;
-              const isActive = players[currentPlayerIndex]?.id === p.id;
-              return <motion.div key={p.id} className="absolute" style={{
-                left: `${point.x}%`,
-                top: `${point.y}%`,
-                transform: `translate(calc(-50% + ${xOffsetPx}px), -58%)`,
-                filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined,
-                zIndex: 18
-              }} animate={{
-                left: `${point.x}%`,
-                top: `${point.y}%`
-              }} transition={{
-                duration: HOP_DURATION_MS / 1000,
-                ease: [0.22, 1, 0.36, 1]
-              }}>
-                          <MiniPawn color={PAWN_COLORS[p.color] || PAWN_COLORS.purple} letter={p.name.charAt(0).toUpperCase()} avatar={p.avatar} isActive={isActive} />
-                        </motion.div>;
-            })}
-                </Fragment>;
+          return <g key={`lane-road-${laneIdx}`}>
+                <path d={lanePath} fill="none" stroke="rgba(12,14,24,0.95)" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}44`} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}88`} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.8 4.4" />
+              </g>;
         })}
+        </svg>
+        {/* Overpass hints so crossovers feel intentional, not abstract */}
+        <div className="absolute left-[48%] top-[53%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40" style={{
+        boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+      }} />
+        <div className="absolute left-[54%] top-[39%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40" style={{
+        boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+      }} />
 
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-              <div className="flex gap-2 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/10">
-                {paths.map((p, i) => {
-              const isCurrentLane = currentPlayer.pathIndex === i;
-              return <div key={i} className="flex items-center gap-1 text-[10px] font-black px-1" style={{
-                color: PATH_NEON_HEX[i],
-                opacity: isCurrentLane ? 1 : 0.62
-              }}>
-                      <span>{p.emoji}</span>
-                      <span className="hidden sm:inline">{LANE_LABELS[i] ?? p.name.split(' →')[0]}</span>
-                    </div>;
-            })}
-              </div>
-            </div>
-          </motion.div>}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isZoomed && <motion.div key={`zoomed-${activePathIdx}`} initial={{
-        opacity: 0,
-        scale: 0.96
-      }} animate={{
-        opacity: 1,
-        scale: 1
-      }} exit={{
-        opacity: 0
-      }} transition={{
-        duration: 0.45,
-        ease: [0.22, 1, 0.36, 1]
-      }} className="absolute inset-0">
-            {/* Grounded board slab and subtle path texture */}
-            <div className="absolute left-1/2 top-[9%] bottom-[10%] w-[min(92vw,440px)] -translate-x-1/2 rounded-[2.3rem] border border-white/10" style={{
-          background: 'linear-gradient(180deg, rgba(8,8,20,0.86) 0%, rgba(12,10,30,0.86) 100%)',
-          boxShadow: `0 26px 54px rgba(0,0,0,0.46), inset 0 0 40px ${neon}22`
-        }} />
-            <div className="absolute left-1/2 top-[12%] bottom-[13%] w-[min(86vw,330px)] -translate-x-1/2 rounded-[2rem] opacity-55" style={{
-          backgroundImage: 'repeating-linear-gradient(150deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 14px)'
-        }} />
-            <div className="absolute left-1/2 top-[11%] bottom-[12%] w-[min(84vw,220px)] -translate-x-1/2 rounded-[1.7rem] border border-white/8" style={{
-          background: 'linear-gradient(180deg, rgba(10,10,24,0.85), rgba(14,12,34,0.9))',
-          boxShadow: `0 0 24px ${neon}33`
-        }} />
-            <div className="absolute left-1/2 top-[12%] bottom-[13%] w-[min(82vw,180px)] -translate-x-1/2 rounded-[1.45rem]" style={{
-          background: `linear-gradient(180deg, ${neon}18, rgba(14,14,36,0.78) 28%, rgba(12,12,32,0.88) 72%, ${neon}14)`,
-          boxShadow: `inset 0 0 20px ${neon}40`
-        }} />
-            <div className="absolute left-1/2 top-[12%] bottom-[13%] w-[min(84vw,200px)] -translate-x-1/2 rounded-[1.6rem] border border-white/8" style={{
-          boxShadow: `inset 0 0 0 2px ${neon}22, 0 0 20px ${neon}20`
-        }} />
-
-            {/* Centered card path: cards are the spaces the pawn travels on. */}
-            {zoomedTilesOnPath.map((tileId, idx) => {
-          const distanceFromCurrent = idx - clampedZoomedPos;
-          if (Math.abs(distanceFromCurrent) > ZOOMED_VISIBLE_CARD_RANGE) return null;
-          const nextDistanceFromCurrent = idx + 1 - clampedZoomedPos;
-          const showConnector = idx < totalTilesZoomed - 1 && Math.abs(nextDistanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE;
-          const cardCenterTop = `calc(${zoomedPawnYPct}% - ${distanceFromCurrent * ZOOMED_CARD_STEP_PX}px)`;
-          const connectorCenterTop = `calc(${zoomedPawnYPct}% - ${(distanceFromCurrent + 0.5) * ZOOMED_CARD_STEP_PX}px)`;
-          const tile = getTileById(tileId);
-          const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
-          const TileIcon = styleInfo.icon;
-          const isCurrent = distanceFromCurrent === 0;
-          return <Fragment key={`card-space-${tileId}-${idx}`}>
-                  {showConnector && <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{
-              top: connectorCenterTop,
-              height: ZOOMED_CARD_STEP_PX - ZOOMED_CARD_HEIGHT_PX + 10,
-              width: 10,
-              background: `linear-gradient(180deg, ${neon}66, ${neon}24)`,
-              boxShadow: `0 0 10px ${neon}66`,
-              zIndex: 18
-            }} />}
-                  <motion.div className={`absolute left-1/2 flex w-[min(76vw,230px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-2 text-center shadow-2xl backdrop-blur-xl ${styleInfo.bg} ${styleInfo.border}`} style={{
-              top: cardCenterTop,
-              height: ZOOMED_CARD_HEIGHT_PX,
+        {paths.map((_, laneIdx) => {
+        const laneCurve = overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0];
+        const tilesOnLane = activePathTiles[laneIdx] ?? [];
+        const totalTilesLane = tilesOnLane.length || 30;
+        const playersOnLane = players.filter((p) => p.pathIndex === laneIdx);
+        const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
+        const laneIsActive = laneIdx === activePathIdx;
+        return <Fragment key={laneIdx}>
+              {tilesOnLane.map((tileId, idx) => {
+            const progress = idx / Math.max(1, totalTilesLane - 1);
+            const point = getPointOnLaneCurve(laneCurve, progress);
+            const distanceFromCurrent = laneIsActive ? idx - clampedZoomedPos : 999;
+            const showInZoom = !isZoomed || !laneIsActive || Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE + 2;
+            if (!showInZoom) return null;
+            const showDetailedCard = isZoomed && laneIsActive && Math.abs(distanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE;
+            const isCurrent = showDetailedCard && distanceFromCurrent === 0;
+            const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
+            const tile = getTileById(tileId);
+            const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
+            const TileIcon = styleInfo.icon;
+            const tileRotate = showDetailedCard ? 0 : Math.max(-26, Math.min(26, point.angle));
+            const width = showDetailedCard ? 168 : isCheckpoint ? 34 : 24;
+            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : isCheckpoint ? 15 : 10;
+            return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? `rounded-2xl px-3 py-2 text-center ${styleInfo.bg} ${styleInfo.border}` : 'rounded-lg'} flex items-center justify-center backdrop-blur-md`} style={{
+              left: `${point.x}%`,
+              top: `${point.y}%`,
+              width,
+              height,
+              transform: `translate(-50%, -50%) rotate(${tileRotate}deg)`,
+              transformOrigin: 'center center',
               borderColor: isCurrent ? neon : undefined,
-              opacity: isCurrent ? 1 : Math.max(0.54, 0.82 - Math.abs(distanceFromCurrent) * 0.14),
-              boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : '0 10px 22px rgba(0,0,0,0.3)',
-              zIndex: isCurrent ? 23 : 20
-            }} animate={{
-              scale: isCurrent ? [1, 1.03, 1] : 0.97
-            }} transition={{
-              duration: 0.24
+              background: showDetailedCard ? undefined : 'rgba(18,18,34,0.9)',
+              boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : isCheckpoint ? `0 0 12px ${laneColor}88` : `0 0 6px ${laneColor}55`,
+              zIndex: showDetailedCard ? 28 : 18,
+              opacity: showDetailedCard ? isCurrent ? 1 : 0.82 : laneIsActive ? 1 : 0.72
+            }} animate={isCurrent ? {
+              scale: [1, 1.03, 1]
+            } : undefined} transition={{
+              duration: 0.3
             }}>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 shadow-inner">
-                        <TileIcon className="h-4 w-4 text-slate-700" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
-                          Space {idx + 1}
-                        </p>
-                        <p className="max-w-[178px] truncate text-xs font-black text-slate-900">{tile.name}</p>
-                      </div>
-                      {isCurrent && <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white" style={{
-                background: neon,
-                boxShadow: `0 0 16px ${neon}`
-              }}>
-                          landing
-                        </span>}
-                    </motion.div>
-                </Fragment>;
-        })}
+                    {showDetailedCard ? <div className="flex w-full items-center justify-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 shadow-inner">
+                          <TileIcon className="h-4 w-4 text-slate-700" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Space {idx + 1}
+                          </p>
+                          <p className="max-w-[118px] truncate text-xs font-black text-slate-900">{tile.name}</p>
+                        </div>
+                      </div> : <div className="h-2.5 w-2.5 rounded-full bg-white/70" />}
+                  </motion.div>;
+          })}
 
-            {/* Pawn anchor: keeps the pawn visually attached to the active space */}
-            <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" style={{
-          top: zoomedPawnLandingTop,
+              {playersOnLane.map((p, stackIdx) => {
+            const isCurrentPlayer = p.id === currentPlayer.id;
+            if (isZoomed && isCurrentPlayer) return null;
+            const lanePos = isCurrentPlayer ? zoomedDisplayPos : p.position;
+            const clampedLanePos = Math.max(0, Math.min(lanePos, totalTilesLane - 1));
+            const playerProgress = clampedLanePos / Math.max(1, totalTilesLane - 1);
+            const point = getPointOnLaneCurve(laneCurve, playerProgress);
+            const xOffsetPx = (stackIdx - (playersOnLane.length - 1) / 2) * 16;
+            const isActive = players[currentPlayerIndex]?.id === p.id;
+            return <motion.div key={p.id} className="absolute" style={{
+              left: `${point.x}%`,
+              top: `${point.y}%`,
+              transform: `translate(calc(-50% + ${xOffsetPx}px), -58%)`,
+              filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined,
+              zIndex: 30
+            }} animate={{
+              left: `${point.x}%`,
+              top: `${point.y}%`
+            }} transition={{
+              duration: HOP_DURATION_MS / 1000,
+              ease: [0.22, 1, 0.36, 1]
+            }}>
+                  <MiniPawn color={PAWN_COLORS[p.color] || PAWN_COLORS.purple} letter={p.name.charAt(0).toUpperCase()} avatar={p.avatar} isActive={isActive} />
+                </motion.div>;
+          })}
+            </Fragment>;
+      })}
+
+        {isZoomed && <Fragment>
+            <motion.div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" style={{
+          left: `${activeLanePoint.x}%`,
+          top: `${activeLanePoint.y}%`,
           width: 142,
           height: 32,
           background: `radial-gradient(circle, ${neon}88 0%, ${neon}22 60%, transparent 100%)`,
           boxShadow: `0 0 20px ${neon}88`,
-          zIndex: 25
+          zIndex: 34
         }} animate={{
           scaleX: hopping ? [1, 0.94, 1.08, 1] : [1, 1.03, 1],
           scaleY: hopping ? [1, 1.06, 0.94, 1] : [1, 0.98, 1]
         }} transition={{
           duration: hopping ? HOP_DURATION_MS * 0.72 / 1000 : 1.5
         }} />
-
-            {/* Active player pawn — unchanged design, now centered on visible spaces */}
-            <motion.div className="absolute" initial={false} style={{
-          left: `${ZOOMED_LANE_X}%`,
-          top: zoomedPawnLandingTop,
+            <motion.div className="absolute" style={{
+          left: `${activeLanePoint.x}%`,
+          top: `${activeLanePoint.y}%`,
           transform: 'translate(-50%, -100%)',
           filter: `drop-shadow(0 0 28px ${neon}cc)`,
-          zIndex: 30
+          zIndex: 40
         }} animate={{
-          top: zoomedPawnLandingTop
+          left: `${activeLanePoint.x}%`,
+          top: `${activeLanePoint.y}%`
         }} transition={{
           duration: HOP_DURATION_MS / 1000,
           ease: [0.22, 1, 0.36, 1]
         }}>
               <Pawn3D color={PAWN_COLORS[currentPlayer.color] || PAWN_COLORS.purple} avatar={currentPlayer.avatar} letter={currentPlayer.name.charAt(0).toUpperCase()} scale={1} hopping={hopping} />
             </motion.div>
+          </Fragment>}
+      </motion.div>
 
-            <motion.div className="absolute left-1/2 top-20 -translate-x-1/2 rounded-full border border-white/12 bg-black/35 px-4 py-2 text-center backdrop-blur-md" initial={{
-          opacity: 0,
-          y: -10
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }}>
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
-                {currentPlayer.position === 0 ? 'First move' : 'Moving'}
-              </p>
-              <p className="text-sm font-black text-white">
-                Watch {currentPlayer.name}'s pawn
-              </p>
-            </motion.div>
+      {isZoomed && <motion.div className="absolute left-1/2 top-20 -translate-x-1/2 rounded-full border border-white/12 bg-black/35 px-4 py-2 text-center backdrop-blur-md" initial={{
+      opacity: 0,
+      y: -10
+    }} animate={{
+      opacity: 1,
+      y: 0
+    }}>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/55">
+            {currentPlayer.position === 0 ? 'First move' : 'Moving'}
+          </p>
+          <p className="text-sm font-black text-white">
+            Watch {currentPlayer.name}'s pawn
+          </p>
+        </motion.div>}
 
-            <div className="absolute bottom-32 left-3 md:left-6 z-30">
-              <div className="rounded-2xl p-4 backdrop-blur-md border-2" style={{
-            background: 'rgba(15,8,35,0.85)',
-            borderColor: `${neon}66`,
-            boxShadow: `0 8px 30px rgba(0,0,0,0.5), 0 0 30px ${neon}44, inset 0 1px 0 rgba(255,255,255,0.1)`
+      <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+        <div className="flex gap-2 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-sm border border-white/10">
+          {paths.map((p, i) => {
+          const isCurrentLane = currentPlayer.pathIndex === i;
+          return <div key={i} className="flex items-center gap-1 text-[10px] font-black px-1" style={{
+            color: PATH_NEON_HEX[i],
+            opacity: isCurrentLane ? 1 : 0.62
           }}>
-                <p className="text-white/70 font-black text-[10px] tracking-widest mb-2 leading-tight">
-                  ON THE ROAD
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{paths[activePathIdx]?.emoji}</span>
-                  <span className="text-base font-black uppercase tracking-wider" style={{
-                color: neon,
-                textShadow: `0 0 12px ${neon}`
-              }}>
-                    {LANE_LABELS[activePathIdx] ?? paths[activePathIdx]?.name?.split(' →')[0]}
-                  </span>
-                </div>
-                <div className="mt-2 text-white/70 text-[11px] font-black tracking-wider">
-                  TILE {clampedZoomedPos + 1} / {totalTilesZoomed}
-                </div>
-              </div>
+                <span>{p.emoji}</span>
+                <span className="hidden sm:inline">{LANE_LABELS[i] ?? p.name.split(' →')[0]}</span>
+              </div>;
+        })}
+        </div>
+      </div>
+
+      {isZoomed && <div className="absolute bottom-32 left-3 md:left-6 z-30">
+          <div className="rounded-2xl p-4 backdrop-blur-md border-2" style={{
+        background: 'rgba(15,8,35,0.85)',
+        borderColor: `${neon}66`,
+        boxShadow: `0 8px 30px rgba(0,0,0,0.5), 0 0 30px ${neon}44, inset 0 1px 0 rgba(255,255,255,0.1)`
+      }}>
+            <p className="text-white/70 font-black text-[10px] tracking-widest mb-2 leading-tight">
+              ON THE ROAD
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{paths[activePathIdx]?.emoji}</span>
+              <span className="text-base font-black uppercase tracking-wider" style={{
+            color: neon,
+            textShadow: `0 0 12px ${neon}`
+          }}>
+                {LANE_LABELS[activePathIdx] ?? paths[activePathIdx]?.name?.split(' →')[0]}
+              </span>
             </div>
-          </motion.div>}
-      </AnimatePresence>
+            <div className="mt-2 text-white/70 text-[11px] font-black tracking-wider">
+              TILE {clampedZoomedPos + 1} / {totalTilesZoomed}
+            </div>
+          </div>
+        </div>}
 
       <div className="absolute top-4 right-4 md:right-8 z-30 flex flex-col gap-2">
         {players.map((p, i) => {
