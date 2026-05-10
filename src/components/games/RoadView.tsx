@@ -437,6 +437,20 @@ const STREET_LIGHTS = [
   { left: '47%', top: '22%' },
   { left: '54%', top: '20%' }
 ];
+const UPRIGHT_CITY_FACADES = [
+  { side: 'left', left: '0%', top: '6%', width: '18%', height: '44%', label: 'LOANS', accent: '#f43f5e', windows: 18 },
+  { side: 'left', left: '13%', top: '24%', width: '12%', height: '34%', label: 'CAFE', accent: '#22d3ee', windows: 12 },
+  { side: 'left', left: '3%', top: '54%', width: '19%', height: '32%', label: 'MARKET', accent: '#f59e0b', windows: 15 },
+  { side: 'right', left: '82%', top: '8%', width: '18%', height: '42%', label: 'DREAMS', accent: '#a855f7', windows: 18 },
+  { side: 'right', left: '75%', top: '31%', width: '15%', height: '35%', label: 'ARCADE', accent: '#34d399', windows: 12 },
+  { side: 'right', left: '82%', top: '61%', width: '16%', height: '28%', label: 'MOTEL', accent: '#ec4899', windows: 10 }
+];
+const ROADSIDE_PROPS = [
+  { left: '12%', top: '73%', label: 'BUS STOP', color: '#38bdf8' },
+  { left: '85%', top: '69%', label: 'OPEN 24H', color: '#f472b6' },
+  { left: '9%', top: '43%', label: 'CHOICES', color: '#f59e0b' },
+  { left: '82%', top: '46%', label: 'NO RISK', color: '#fb7185' }
+];
 
 // MAIN COMPONENT
 export function RoadView(props: RoadViewProps) {
@@ -817,6 +831,60 @@ export function RoadView(props: RoadViewProps) {
             </motion.div>
           </Fragment>}
       </motion.div>
+      <div className="absolute inset-0 pointer-events-none" style={{
+      zIndex: 1
+    }}>
+        {UPRIGHT_CITY_FACADES.map((facade, facadeIndex) => <div key={`upright-facade-${facadeIndex}`} className="absolute overflow-hidden rounded-t-xl border border-white/10" style={{
+        left: facade.left,
+        top: facade.top,
+        width: facade.width,
+        height: facade.height,
+        background: `linear-gradient(180deg, rgba(25,29,46,0.96), rgba(8,10,18,0.98)), radial-gradient(circle at 50% 0%, ${facade.accent}44, transparent 48%)`,
+        boxShadow: `${facade.side === 'left' ? '18px' : '-18px'} 28px 36px rgba(0,0,0,0.52), 0 0 28px ${facade.accent}33`,
+        transform: facade.side === 'left' ? 'skewY(-5deg)' : 'skewY(5deg)',
+        transformOrigin: facade.side === 'left' ? 'right bottom' : 'left bottom'
+      }}>
+            <div className="absolute inset-x-2 top-2 rounded-md border border-white/15 bg-black/55 px-2 py-1 text-center text-[9px] font-black uppercase tracking-[0.18em]" style={{
+          color: facade.accent,
+          boxShadow: `0 0 18px ${facade.accent}88`
+        }}>
+              {facade.label}
+            </div>
+            <div className="absolute left-2 right-2 top-12 grid gap-1.5" style={{
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'
+        }}>
+              {Array.from({ length: facade.windows }).map((_, windowIndex) => <span key={windowIndex} className="h-2 rounded-[2px]" style={{
+            background: windowIndex % 4 === 1 ? 'rgba(255,255,255,0.12)' : `${facade.accent}${windowIndex % 3 === 0 ? 'aa' : '66'}`,
+            boxShadow: windowIndex % 3 === 0 ? `0 0 12px ${facade.accent}` : undefined
+          }} />)}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-12 border-t border-white/10 bg-black/35">
+              <div className="mx-auto mt-3 h-8 w-10 rounded-t-lg border border-white/12 bg-black/50" />
+            </div>
+          </div>)}
+
+        {ROADSIDE_PROPS.map((prop, propIndex) => <div key={`roadside-prop-${propIndex}`} className="absolute rounded-md border border-white/15 bg-black/75 px-2 py-1 text-center text-[7px] font-black uppercase tracking-[0.14em]" style={{
+        left: prop.left,
+        top: prop.top,
+        color: prop.color,
+        boxShadow: `0 0 18px ${prop.color}88, 0 14px 24px rgba(0,0,0,0.42)`
+      }}>
+            <span className="absolute left-1/2 top-full h-11 w-1 -translate-x-1/2 bg-slate-700/90" />
+            {prop.label}
+          </div>)}
+
+        {[0, 1, 2].map((carIndex) => <div key={`parked-car-${carIndex}`} className="absolute rounded-xl border border-white/15" style={{
+        left: `${carIndex === 1 ? 82 : 10 + carIndex * 6}%`,
+        bottom: `${9 + carIndex * 11}%`,
+        width: `${54 - carIndex * 4}px`,
+        height: `${22 - carIndex * 2}px`,
+        background: carIndex === 1 ? 'linear-gradient(180deg, #0f172a, #020617)' : 'linear-gradient(180deg, #7f1d1d, #1f0707)',
+        boxShadow: '0 12px 22px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)'
+      }}>
+            <span className="absolute left-2 top-1 h-1.5 w-4 rounded-full bg-sky-200/70" />
+            <span className="absolute right-1 bottom-1 h-1.5 w-2 rounded-full bg-red-400/90" />
+          </div>)}
+      </div>
       {['left', 'right'].map((side) => <div key={`foreground-${side}`} className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-[15%] pointer-events-none overflow-hidden`} style={{
       background: side === 'left' ? 'linear-gradient(90deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)' : 'linear-gradient(270deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)',
       maskImage: 'linear-gradient(180deg, transparent 0%, black 12%, black 92%, transparent 100%)',

@@ -55,6 +55,25 @@ interface TileData {
   effect: 'move' | 'skip' | 'roll_again' | 'none' | 'tax' | 'money_loss' | 'money_gain' | 'chaos_portal' | 'career_switch';
   effectValue?: number;
 }
+interface ChaosChoice {
+  label: string;
+  description: string;
+  icon: string;
+  tone: 'risk' | 'caution' | 'hope';
+  outcomeTitle: string;
+  outcomeText: string;
+  moneyDelta: number;
+  skipNextTurn?: boolean;
+  escape?: boolean;
+}
+interface ChaosScene {
+  title: string;
+  subtitle: string;
+  location: string;
+  leftNote: string;
+  sceneAccent: string;
+  choices: ChaosChoice[];
+}
 type GamePhase = 'setup' | 'starting_deal' | 'journey_start' | 'playing' | 'tax_event' | 'chaos_realm' | 'career_switch' | 'winner';
 const PAWN_STEP_DURATION_MS = 440;
 const PAWN_LANDING_BUFFER_MS = 700;
@@ -1783,6 +1802,107 @@ const CHAOS_REALM_TILE_POOL = [
   effect: 'exit' as const,
   effectValue: 0
 }];
+const CHAOS_REALM_SCENES: ChaosScene[] = [{
+  title: 'Car dead in the storm',
+  subtitle: 'The engine clicks once, then gives up. Rain hammers the windshield.',
+  location: 'Flooded service road',
+  leftNote: 'Your phone is at 3%. You need one smart move.',
+  sceneAccent: '#f59e0b',
+  choices: [{
+    label: 'Check the car',
+    description: 'Pop the hood and try to get it moving.',
+    icon: '🔧',
+    tone: 'caution',
+    outcomeTitle: 'You bought yourself time',
+    outcomeText: 'The fix barely holds, but you avoid a bigger tow bill.',
+    moneyDelta: -75
+  }, {
+    label: 'Enter the gas station',
+    description: 'Look for help, supplies, or a working phone.',
+    icon: '⛽',
+    tone: 'hope',
+    outcomeTitle: 'A clerk helped you call a ride',
+    outcomeText: 'It costs money, but you get out of the storm safely.',
+    moneyDelta: -120,
+    escape: true
+  }, {
+    label: 'Take the alley',
+    description: 'A shortcut might get you out faster.',
+    icon: '🌆',
+    tone: 'risk',
+    outcomeTitle: 'The shortcut got expensive',
+    outcomeText: 'You found the way out, but lost cash replacing what got ruined.',
+    moneyDelta: -220
+  }]
+}, {
+  title: 'Abandoned gas station',
+  subtitle: 'The pumps are dead. A neon OPEN sign flickers like it is lying.',
+  location: 'Last stop before downtown',
+  leftNote: 'Every option could help. Every option could make it worse.',
+  sceneAccent: '#a855f7',
+  choices: [{
+    label: 'Search the counter',
+    description: 'Look for a charger, map, or emergency number.',
+    icon: '🔦',
+    tone: 'caution',
+    outcomeTitle: 'You found a working charger',
+    outcomeText: 'A little battery, a little clarity, and one way forward.',
+    moneyDelta: 50
+  }, {
+    label: 'Ask the stranger outside',
+    description: 'They know the area, but you do not know them.',
+    icon: '🧥',
+    tone: 'risk',
+    outcomeTitle: 'Bad advice sent you in circles',
+    outcomeText: 'You make it out, shaken and short on cash.',
+    moneyDelta: -180,
+    skipNextTurn: true
+  }, {
+    label: 'Stay under the awning',
+    description: 'Wait out the worst of the rain.',
+    icon: '🌧️',
+    tone: 'hope',
+    outcomeTitle: 'The storm eased',
+    outcomeText: 'You lost time, but avoided making a desperate choice.',
+    moneyDelta: 0,
+    escape: true
+  }]
+}, {
+  title: 'No safe route',
+  subtitle: 'Sirens echo under the overpass. The city feels like it is watching.',
+  location: 'Underpass by the tracks',
+  leftNote: 'One more decision. Then the board pulls you back.',
+  sceneAccent: '#22d3ee',
+  choices: [{
+    label: 'Call someone trusted',
+    description: 'Swallow your pride and ask for help.',
+    icon: '📱',
+    tone: 'hope',
+    outcomeTitle: 'Someone answered',
+    outcomeText: 'Support arrived when you needed it most.',
+    moneyDelta: 125,
+    escape: true
+  }, {
+    label: 'Sleep at the motel',
+    description: 'Pay for one night and regroup.',
+    icon: '🏚️',
+    tone: 'caution',
+    outcomeTitle: 'A rough reset',
+    outcomeText: 'Not comfortable, not cheap, but safer than the street.',
+    moneyDelta: -160,
+    escape: true
+  }, {
+    label: 'Keep walking',
+    description: 'Push through and hope the city lets you pass.',
+    icon: '🚶',
+    tone: 'risk',
+    outcomeTitle: 'You made it through exhausted',
+    outcomeText: 'You escape, but the stress follows you into the next turn.',
+    moneyDelta: -90,
+    skipNextTurn: true,
+    escape: true
+  }]
+}];
 const CAREER_SWITCH_EVENTS = [{
   name: 'Took time off to figure things out 😬',
   amount: -300
@@ -2271,16 +2391,13 @@ export function BoardGamePage() {
   const [currentRealmEventIndex, setCurrentRealmEventIndex] = useState(0);
   const [realmTotalLoss, setRealmTotalLoss] = useState(0);
   const [pendingNewPath, setPendingNewPath] = useState<number | null>(null);
-  // New Chaos Realm State
-  const [chaosRealmTiles, setChaosRealmTiles] = useState<typeof CHAOS_REALM_TILE_POOL>([]);
-  const [chaosRealmPosition, setChaosRealmPosition] = useState(0);
-  const [chaosRealmDiceValue, setChaosRealmDiceValue] = useState<number | null>(null);
-  const [chaosRealmRolling, setChaosRealmRolling] = useState(false);
+  // Short first-person Chaos Realm mode state
+  const [chaosRealmScenes, setChaosRealmScenes] = useState<ChaosScene[]>([]);
+  const [chaosSceneIndex, setChaosSceneIndex] = useState(0);
+  const [selectedChaosChoice, setSelectedChaosChoice] = useState<ChaosChoice | null>(null);
+  const [chaosOutcome, setChaosOutcome] = useState<ChaosChoice | null>(null);
   const [eliminatedPlayers, setEliminatedPlayers] = useState<string[]>([]);
-  const [showElimination, setShowElimination] = useState(false);
-  const [eliminatedPlayerName, setEliminatedPlayerName] = useState('');
   const [showChaosTransition, setShowChaosTransition] = useState(false);
-  const activeChaosTileRef = useRef<HTMLDivElement>(null);
   // Transportation event state
   const [transportEvent, setTransportEvent] = useState<{
     name: string;
@@ -2641,40 +2758,17 @@ export function BoardGamePage() {
           chaosTriggersRemaining: p.chaosTriggersRemaining - 1
         } : p));
       }
-      // Generate Chaos Realm Path
-      const pathLength = Math.floor(Math.random() * 6) + 10; // 10 to 15 tiles
-      const newChaosTiles = [];
-      // 1. Always start with Entry Tile
-      newChaosTiles.push(CHAOS_REALM_TILE_POOL[0]);
-      // 2. Generate middle tiles
-      const middleTilesCount = pathLength - 2; // -1 for entry, -1 for exit
-      // Get pools
-      const strugglePool = CHAOS_REALM_TILE_POOL.filter((t) => t.id >= 1 && t.id <= 20);
-      const recoveryPool = CHAOS_REALM_TILE_POOL.filter((t) => t.id >= 22 && t.id <= 31);
-      const safePool = CHAOS_REALM_TILE_POOL.filter((t) => t.id >= 32 && t.id <= 34);
-      const instantLoseTile = CHAOS_REALM_TILE_POOL.find((t) => t.id === 21)!;
-      // Shuffle pools
-      const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5);
-      const shuffledStruggle = shuffle(strugglePool);
-      const shuffledRecovery = shuffle(recoveryPool);
-      const shuffledSafe = shuffle(safePool);
-      // Build middle section: mostly struggle, 1-2 recovery, 1-2 safe
-      const middleSection = [];
-      const numRecovery = Math.floor(Math.random() * 2) + 1; // 1-2
-      const numSafe = Math.floor(Math.random() * 2) + 1; // 1-2
-      const numStruggle = middleTilesCount - numRecovery - numSafe - 1; // -1 for instant lose
-      middleSection.push(...shuffledStruggle.slice(0, numStruggle));
-      middleSection.push(...shuffledRecovery.slice(0, numRecovery));
-      middleSection.push(...shuffledSafe.slice(0, numSafe));
-      // Add instant lose tile
-      middleSection.push(instantLoseTile);
-      // Shuffle middle section so instant lose is random (but not first or last)
-      const shuffledMiddle = shuffle(middleSection);
-      newChaosTiles.push(...shuffledMiddle);
-      // 3. Always end with Exit Tile
-      newChaosTiles.push(CHAOS_REALM_TILE_POOL.find((t) => t.id === 35)!);
-      setChaosRealmTiles(newChaosTiles);
-      setChaosRealmPosition(0);
+      // Generate a short first-person scene sequence instead of another board.
+      const sceneCount = Math.floor(Math.random() * 3) + 1;
+      const shuffledScenes = [...CHAOS_REALM_SCENES].sort(() => Math.random() - 0.5).slice(0, sceneCount);
+      const entryFlavor = CHAOS_REALM_TILE_POOL[0].description;
+      setChaosRealmScenes(shuffledScenes.map((scene, sceneIdx) => sceneIdx === 0 ? {
+        ...scene,
+        leftNote: `${entryFlavor} ${scene.leftNote}`
+      } : scene));
+      setChaosSceneIndex(0);
+      setSelectedChaosChoice(null);
+      setChaosOutcome(null);
       setRealmTotalLoss(0);
       setShowChaosTransition(true);
       setPhase('chaos_realm');
@@ -2717,76 +2811,41 @@ export function BoardGamePage() {
       }
     }
   };
-  const rollChaosDice = () => {
-    if (chaosRealmRolling || showElimination) return;
-    setChaosRealmRolling(true);
-    setChaosRealmDiceValue(null);
-    setTimeout(() => {
-      // Roll 1-3 for chaos realm
-      const roll = Math.floor(Math.random() * 3) + 1;
-      setChaosRealmDiceValue(roll);
-      setChaosRealmRolling(false);
-      setTimeout(() => {
-        let newPos = chaosRealmPosition + roll;
-        if (newPos >= chaosRealmTiles.length - 1) {
-          newPos = chaosRealmTiles.length - 1;
-        }
-        setChaosRealmPosition(newPos);
-        setTimeout(() => handleChaosTileEffect(newPos), 1000);
-      }, 1000);
-    }, 1500);
-  };
-  const handleChaosTileEffect = (pos: number) => {
-    const tile = chaosRealmTiles[pos];
-    if (!tile) return;
-    if (tile.effect === 'instant_lose') {
-      const player = players[currentPlayerIndex];
-      setEliminatedPlayerName(player.name);
-      setShowElimination(true);
-      const newEliminated = [...eliminatedPlayers, player.id];
-      setEliminatedPlayers(newEliminated);
-      setTimeout(() => {
-        setShowElimination(false);
-        // Check if only 1 player remains
-        const remainingPlayers = players.filter((p) => !newEliminated.includes(p.id));
-        if (remainingPlayers.length === 1) {
-          setWinner(remainingPlayers[0]);
-          setPhase('winner');
-          return;
-        }
-        setPhase('playing');
-        setZoomedTile(null);
-        setChaosRealmDiceValue(null);
-        advanceToNextPlayer(newEliminated);
-      }, 4000);
-      return;
-    }
-    if (tile.effect === 'money_loss' || tile.effect === 'recovery') {
-      setRealmTotalLoss((prev) => prev + tile.effectValue);
-    } else if (tile.effect === 'move_back') {
-      setTimeout(() => {
-        let backPos = pos + tile.effectValue;
-        if (backPos < 0) backPos = 0;
-        setChaosRealmPosition(backPos);
-        // Don't trigger the effect of the tile we moved back to, to avoid infinite loops
-      }, 1500);
-    } else if (tile.effect === 'skip_turn') {
+  const handleChaosChoice = (choice: ChaosChoice) => {
+    if (selectedChaosChoice) return;
+    setSelectedChaosChoice(choice);
+    setChaosOutcome(choice);
+    setRealmTotalLoss((prev) => prev + choice.moneyDelta);
+    if (choice.skipNextTurn) {
       setPlayers((prev) => prev.map((p, i) => i === currentPlayerIndex ? {
         ...p,
         skipNextTurn: true
       } : p));
-    } else if (tile.effect === 'exit') {
-      setTimeout(() => {
-        setPlayers((prev) => prev.map((p, i) => i === currentPlayerIndex ? {
-          ...p,
-          money: p.money + realmTotalLoss
-        } : p));
-        setPhase('playing');
-        setZoomedTile(null);
-        setChaosRealmDiceValue(null);
-        advanceToNextPlayer();
-      }, 2000);
     }
+  };
+  const finishChaosRealm = () => {
+    setPlayers((prev) => prev.map((p, i) => i === currentPlayerIndex ? {
+      ...p,
+      money: p.money + realmTotalLoss
+    } : p));
+    setPhase('playing');
+    setZoomedTile(null);
+    setSelectedChaosChoice(null);
+    setChaosOutcome(null);
+    setChaosRealmScenes([]);
+    setChaosSceneIndex(0);
+    advanceToNextPlayer();
+  };
+  const continueChaosRealm = () => {
+    if (!chaosOutcome) return;
+    const shouldExit = chaosOutcome.escape || chaosSceneIndex >= chaosRealmScenes.length - 1;
+    if (shouldExit) {
+      finishChaosRealm();
+      return;
+    }
+    setChaosSceneIndex((prev) => prev + 1);
+    setSelectedChaosChoice(null);
+    setChaosOutcome(null);
   };
   const advanceToNextPlayer = (customEliminated?: string[]) => {
     const eliminated = customEliminated || eliminatedPlayers;
@@ -2893,16 +2952,9 @@ export function BoardGamePage() {
       }
     }
   }, [currentPlayerIndex, phase, showPopup, isRolling, isPawnMoving, jobEffectMessage, eliminatedPlayers]);
-  // Auto-scroll Chaos Realm
-  useEffect(() => {
-    if (phase === 'chaos_realm' && activeChaosTileRef.current) {
-      activeChaosTileRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }
-  }, [chaosRealmPosition, phase]);
   const DiceIcon = diceValue ? [Dice1Icon, Dice2Icon, Dice3Icon, Dice4Icon, Dice5Icon, Dice6Icon][diceValue - 1] : DicesIcon;
+  const currentChaosScene = chaosRealmScenes[chaosSceneIndex] ?? CHAOS_REALM_SCENES[0];
+  const chaosSceneCount = Math.max(1, chaosRealmScenes.length);
   // ===================== RENDER =====================
   return <div className="min-h-screen bg-gradient-to-br from-pink-100 via-lavender-100 to-blue-100 overflow-hidden font-sans select-none">
       <FloatingParticles count={40} />
@@ -3654,6 +3706,66 @@ export function BoardGamePage() {
 
       {/* ========== CHAOS REALM ========== */}
       {phase === 'chaos_realm' && <div className="absolute inset-0 bg-gradient-to-b from-red-950 via-black to-red-950 flex flex-col overflow-hidden z-20">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(127,29,29,0.36),transparent_34%),linear-gradient(180deg,rgba(8,10,24,0.96)_0%,rgba(15,5,12,0.95)_45%,rgba(5,5,8,1)_100%)]" />
+            <motion.div className="absolute inset-x-0 top-0 h-44 bg-slate-950/80 blur-sm" animate={{
+          opacity: [0.7, 0.95, 0.72]
+        }} transition={{
+          duration: 3.2,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }} />
+            {[0, 1, 2].map((bolt) => <motion.div key={`lightning-${bolt}`} className="absolute top-0 h-48 w-px bg-red-100" style={{
+          left: `${24 + bolt * 24}%`,
+          boxShadow: '0 0 24px rgba(248,113,113,0.95), 0 0 70px rgba(239,68,68,0.6)',
+          transform: `skewX(${bolt % 2 === 0 ? -18 : 14}deg)`
+        }} animate={{
+          opacity: [0, 0, 1, 0]
+        }} transition={{
+          duration: 2.8 + bolt * 0.5,
+          repeat: Infinity,
+          delay: bolt * 0.85,
+          times: [0, 0.72, 0.76, 0.82]
+        }} />)}
+            {[0, 1, 2, 3, 4, 5].map((building) => <div key={`chaos-building-${building}`} className="absolute bottom-0 rounded-t-xl border-t border-red-500/20 bg-black/70" style={{
+          left: `${building * 17 - 4}%`,
+          width: `${14 + building % 2 * 6}%`,
+          height: `${34 + building % 3 * 12}%`,
+          boxShadow: '0 0 28px rgba(127,29,29,0.32), inset 0 1px 0 rgba(248,113,113,0.12)'
+        }}>
+                <div className="absolute inset-x-3 top-5 grid grid-cols-3 gap-2">
+                  {Array.from({ length: 18 }).map((_, windowIndex) => <span key={windowIndex} className="h-1 rounded-sm" style={{
+              background: windowIndex % 5 === 0 ? 'rgba(248,113,113,0.82)' : 'rgba(255,255,255,0.07)',
+              boxShadow: windowIndex % 5 === 0 ? '0 0 10px rgba(248,113,113,0.9)' : undefined
+            }} />)}
+                </div>
+                {building % 2 === 0 && <div className="absolute left-3 top-16 rotate-[-8deg] rounded border border-red-500/40 bg-black/80 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-red-400 shadow-[0_0_18px_rgba(239,68,68,0.45)]">
+                    BROKEN
+                  </div>}
+              </div>)}
+            <div className="absolute inset-x-0 bottom-0 h-1/2" style={{
+          background: 'linear-gradient(90deg, rgba(127,29,29,0.4) 0 2px, transparent 2px 18%, transparent 82%, rgba(127,29,29,0.4) 82% calc(82% + 2px), transparent calc(82% + 2px)), radial-gradient(ellipse at 50% 100%, rgba(239,68,68,0.24), transparent 55%)'
+        }} />
+            {[0, 1, 2, 3].map((trash) => <div key={`trash-${trash}`} className="absolute bottom-16 h-8 w-10 rounded-md border border-red-900/70 bg-slate-900/90" style={{
+          left: `${10 + trash * 25}%`,
+          transform: `rotate(${trash % 2 === 0 ? -15 : 12}deg)`,
+          boxShadow: '0 10px 18px rgba(0,0,0,0.5)'
+        }}>
+                <span className="absolute -right-3 top-5 h-2 w-8 rounded-full bg-red-950/80" />
+              </div>)}
+            {Array.from({ length: 34 }).map((_, rain) => <motion.span key={`chaos-rain-${rain}`} className="absolute top-[-12%] h-16 w-px rounded-full bg-sky-200/40" style={{
+          left: `${rain / 34 * 100}%`
+        }} animate={{
+          y: ['0vh', '118vh'],
+          opacity: [0, 0.8, 0]
+        }} transition={{
+          duration: 0.9 + rain % 5 * 0.08,
+          repeat: Infinity,
+          delay: rain * 0.035,
+          ease: 'linear'
+        }} />)}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,transparent_0%,transparent_48%,rgba(0,0,0,0.62)_100%)]" />
+          </div>
           <FloatingParticles count={60} />
 
           {/* Entry Transition Overlay */}
@@ -3700,154 +3812,126 @@ export function BoardGamePage() {
               </motion.div>}
           </AnimatePresence>
 
-          {/* Header */}
-          <div className="p-4 bg-black/50 backdrop-blur-md border-b border-red-900/50 z-30 flex justify-between items-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500" style={{
-          fontFamily: '"Dancing Script", cursive'
-        }}>
-            
-              🔥 Chaos Realm
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                {players[currentPlayerIndex].avatar ? <img src={players[currentPlayerIndex].avatar!} alt="" className={`w-8 h-8 rounded-full border-2 ${PLAYER_BORDER[players[currentPlayerIndex].color]}`} /> : <div className={`w-8 h-8 rounded-full ${PLAYER_COLORS[players[currentPlayerIndex].color]} flex items-center justify-center text-white font-bold text-sm`}>
-                
-                    {players[currentPlayerIndex].name.charAt(0)}
-                  </div>}
-                <span className="text-white font-bold">
-                  {players[currentPlayerIndex].name}
-                </span>
-              </div>
-              <div className="bg-red-950/80 px-4 py-1.5 rounded-full border border-red-800">
-                <span className="text-red-400 text-sm font-bold">
-                  Realm Loss:{' '}
-                </span>
-                <span className="text-red-500 font-bold">
-                  ${Math.abs(realmTotalLoss)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Chaos Board */}
-          <div className="flex-1 relative overflow-y-auto overflow-x-hidden p-8 flex flex-col items-center">
-            <div className="relative w-full max-w-md flex flex-col items-center gap-8 pb-32 pt-10">
-              {/* Path connecting line */}
-              <div className="absolute top-0 bottom-0 w-2 bg-gradient-to-b from-red-900/20 via-red-500/20 to-red-900/20 left-1/2 -translate-x-1/2 rounded-full" />
-
-              {chaosRealmTiles.map((tile, idx) => {
-            const isCurrent = idx === chaosRealmPosition;
-            const isPast = idx < chaosRealmPosition;
-            const isFuture = idx > chaosRealmPosition;
-            return <motion.div key={idx} ref={isCurrent ? activeChaosTileRef : null} initial={{
-              opacity: 0,
-              y: 20
-            }} animate={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              delay: idx * 0.1
-            }} className={`relative w-full p-5 rounded-2xl border-2 transition-all duration-500 z-10 ${isCurrent ? 'bg-red-950/90 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)] scale-105' : isPast ? 'bg-black/60 border-red-900/50 opacity-60' : 'bg-black/80 border-red-900/30'}`}>
-                  
-                    {/* Player Piece on Current Tile */}
-                    {isCurrent && <motion.div layoutId="chaosPlayerPiece" className={`absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border-2 ${PLAYER_BORDER[players[currentPlayerIndex].color]} shadow-[0_0_20px_rgba(255,255,255,0.3)] z-20 ${!players[currentPlayerIndex].avatar ? PLAYER_COLORS[players[currentPlayerIndex].color] : 'bg-white'}`}>
-                    
-                        {players[currentPlayerIndex].avatar ? <img src={players[currentPlayerIndex].avatar!} alt="" className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                            {players[currentPlayerIndex].name.charAt(0)}
-                          </div>}
-                      </motion.div>}
-
-                    {isFuture ? <div className="flex items-center justify-center gap-3 py-2">
-                        <span className="text-3xl opacity-50">💀</span>
-                        <span className="text-red-800 font-bold text-xl tracking-widest">
-                          ???
-                        </span>
-                      </div> : <div className="flex flex-col gap-2 pl-6">
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">{tile.emoji}</span>
-                          <h3 className={`font-bold text-lg ${isCurrent ? 'text-white' : 'text-gray-400'}`}>
-                        
-                            {tile.name}
-                          </h3>
-                        </div>
-                        <p className={`text-sm ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
-                      
-                          {tile.description}
-                        </p>
-                        {tile.effectValue !== 0 && <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold w-max mt-1 ${tile.effect === 'money_loss' ? 'bg-red-900/50 text-red-400 border border-red-800' : tile.effect === 'recovery' ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-gray-800 text-gray-400'}`}>
-                      
-                            {tile.effect === 'money_loss' ? `-$${Math.abs(tile.effectValue)}` : tile.effect === 'recovery' ? `+$${tile.effectValue}` : tile.effect === 'move_back' ? `Move back ${Math.abs(tile.effectValue)}` : ''}
-                          </div>}
-                        {tile.effect === 'instant_lose' && <div className="inline-block px-3 py-1 rounded-full text-xs font-bold w-max mt-1 bg-red-600 text-white animate-pulse">
-                            INSTANT ELIMINATION
-                          </div>}
-                      </div>}
-                  </motion.div>;
-          })}
-            </div>
-          </div>
-
-          {/* Bottom Controls */}
-          <div className="p-6 bg-black/80 backdrop-blur-md border-t border-red-900/50 z-30 flex justify-center">
-            {chaosRealmTiles[chaosRealmPosition]?.effect !== 'exit' && chaosRealmTiles[chaosRealmPosition]?.effect !== 'instant_lose' ? <div className="flex flex-col items-center gap-4">
-                {chaosRealmDiceValue && <motion.div initial={{
-            scale: 0
-          }} animate={{
-            scale: 1
-          }} className="text-4xl font-bold text-red-500 bg-red-950/50 w-16 h-16 rounded-xl flex items-center justify-center border border-red-800">
-              
-                    {chaosRealmDiceValue}
-                  </motion.div>}
-                <motion.button onClick={rollChaosDice} disabled={chaosRealmRolling} whileHover={{
-            scale: 1.05
-          }} whileTap={{
-            scale: 0.95
-          }} className={`px-10 py-4 rounded-full font-bold text-xl shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all ${chaosRealmRolling ? 'bg-red-950 text-red-800 border border-red-900' : 'bg-gradient-to-r from-red-600 to-red-800 text-white border border-red-500 hover:from-red-500 hover:to-red-700'}`}>
-              
-                  {chaosRealmRolling ? 'Rolling...' : '🎲 Roll (1-3)'}
-                </motion.button>
-              </div> : <div className="text-center">
-                <p className="text-white font-bold text-xl mb-2">
-                  {chaosRealmTiles[chaosRealmPosition]?.effect === 'exit' ? 'You survived the Chaos Realm!' : '...'}
-                </p>
-              </div>}
-          </div>
-
-          {/* Elimination Overlay */}
-          <AnimatePresence>
-            {showElimination && <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} exit={{
-          opacity: 0
-        }} className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
-            
-                <motion.div initial={{
-            scale: 0.5,
-            opacity: 0
-          }} animate={{
-            scale: 1,
-            opacity: 1,
-            x: [0, -10, 10, -10, 10, 0],
-            y: [0, 10, -10, 10, -10, 0]
-          }} transition={{
-            duration: 0.5
-          }} className="text-center">
-              
-                  <span className="text-8xl block mb-6">💀</span>
-                  <h1 className="text-6xl md:text-8xl font-bold text-red-600 mb-4 tracking-widest uppercase" style={{
-              textShadow: '0 0 40px rgba(220,38,38,0.8)'
+          <div className="relative z-30 flex min-h-0 flex-1 flex-col">
+            <div className="flex items-start justify-between gap-4 p-5">
+              <div className="max-w-xs">
+                <h2 className="text-4xl font-black uppercase tracking-tight text-purple-300 drop-shadow-[0_0_24px_rgba(168,85,247,0.8)] md:text-6xl" style={{
+              fontFamily: '"Dancing Script", cursive'
             }}>
-                
-                    Eliminated
-                  </h1>
-                  <p className="text-2xl text-red-400 font-bold">
-                    {eliminatedPlayerName} lost everything to the Chaos Realm.
-                  </p>
-                </motion.div>
-              </motion.div>}
-          </AnimatePresence>
+                  Chaos Realm
+                </h2>
+                <p className="mt-2 text-xs font-bold uppercase tracking-[0.24em] text-purple-200/70">
+                  Choose wisely
+                </p>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-white/70">
+                  {currentChaosScene.leftNote}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-red-400/30 bg-black/55 px-4 py-3 text-right backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-200/65">
+                  Scene {chaosSceneIndex + 1} / {chaosSceneCount}
+                </p>
+                <p className="mt-1 text-sm font-black text-red-100">
+                  Impact: {realmTotalLoss >= 0 ? '+' : '-'}${Math.abs(realmTotalLoss)}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative flex-1 overflow-hidden px-5 pb-4">
+              <div className="absolute inset-x-[18%] bottom-[24%] h-[42%] rounded-[50%] opacity-70 blur-2xl" style={{
+            background: `radial-gradient(circle, ${currentChaosScene.sceneAccent}55, transparent 62%)`
+          }} />
+              <div className="absolute left-[35%] top-[20%] h-[34%] w-[34%] rounded-t-xl border border-white/10 bg-black/70 shadow-[0_24px_80px_rgba(0,0,0,0.75)]">
+                <div className="absolute inset-x-8 top-4 rounded-md border border-red-400/35 bg-black/80 py-2 text-center text-3xl font-black uppercase tracking-[0.38em] text-red-400 shadow-[0_0_28px_rgba(239,68,68,0.6)]">
+                  GAS
+                </div>
+                <div className="absolute bottom-0 left-1/2 h-28 w-20 -translate-x-1/2 rounded-t-md border border-white/10 bg-slate-950/85" />
+                <div className="absolute bottom-10 right-8 rounded border border-fuchsia-400/30 bg-black/80 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-fuchsia-300 shadow-[0_0_18px_rgba(217,70,239,0.5)]">
+                  OPEN
+                </div>
+              </div>
+              <div className="absolute bottom-[12%] left-[10%] h-24 w-48 -rotate-6 rounded-2xl border border-white/10 bg-black/70 shadow-[0_22px_42px_rgba(0,0,0,0.65)]">
+                <div className="absolute -top-10 left-6 h-12 w-24 rounded-t-[60%] border border-white/10 bg-black/80" />
+                <div className="absolute left-8 top-8 h-3 w-16 rounded-full bg-amber-200/70 shadow-[0_0_18px_rgba(251,191,36,0.8)]" />
+                <div className="absolute -right-8 top-8 h-16 w-20 rounded-full bg-slate-300/10 blur-lg" />
+              </div>
+              <div className="absolute bottom-[10%] right-[8%] h-36 w-16 rotate-[-22deg] rounded-full bg-black/80 shadow-[0_0_28px_rgba(0,0,0,0.9)]">
+                <div className="absolute -left-10 top-2 h-20 w-20 rounded-full bg-slate-100/20 blur-xl" />
+              </div>
+              <div className="absolute inset-x-[6%] bottom-0 h-[42%]" style={{
+            background: 'radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.16), transparent 58%), linear-gradient(90deg, rgba(250,204,21,0.28) 0 2px, transparent 2px 20%, transparent 80%, rgba(250,204,21,0.28) 80% calc(80% + 2px), transparent calc(80% + 2px))',
+            clipPath: 'polygon(0 100%, 27% 0, 73% 0, 100% 100%)'
+          }} />
+
+              <motion.div key={currentChaosScene.title} initial={{
+            opacity: 0,
+            y: 18
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} className="absolute left-1/2 top-[14%] w-[min(640px,76vw)] -translate-x-1/2 rounded-[2rem] border border-white/12 bg-black/35 p-5 text-center shadow-[0_22px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-[0.32em]" style={{
+              color: currentChaosScene.sceneAccent
+            }}>
+                  {currentChaosScene.location}
+                </p>
+                <h3 className="mt-2 text-3xl font-black text-white md:text-5xl">
+                  {currentChaosScene.title}
+                </h3>
+                <p className="mx-auto mt-3 max-w-lg text-sm font-semibold text-white/70">
+                  {currentChaosScene.subtitle}
+                </p>
+              </motion.div>
+            </div>
+
+            <div className="relative z-40 border-t border-white/10 bg-black/60 px-4 py-4 backdrop-blur-xl">
+              {!chaosOutcome ? <div className="mx-auto grid max-w-5xl grid-cols-1 gap-3 md:grid-cols-3">
+                  {currentChaosScene.choices.map((choice) => <motion.button key={choice.label} onClick={() => handleChaosChoice(choice)} whileHover={{
+              y: -4,
+              scale: 1.02
+            }} whileTap={{
+              scale: 0.98
+            }} className={`rounded-2xl border p-4 text-left transition ${choice.tone === 'risk' ? 'border-cyan-400/35 bg-cyan-950/35 hover:bg-cyan-900/45' : choice.tone === 'hope' ? 'border-purple-400/35 bg-purple-950/35 hover:bg-purple-900/45' : 'border-amber-300/35 bg-amber-950/30 hover:bg-amber-900/40'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/40 text-2xl">
+                          {choice.icon}
+                        </span>
+                        <div>
+                          <h4 className="font-black uppercase tracking-wide text-white">{choice.label}</h4>
+                          <p className="mt-1 text-xs font-semibold text-white/62">{choice.description}</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
+                        Choose this
+                      </p>
+                    </motion.button>)}
+                </div> : <motion.div initial={{
+            opacity: 0,
+            y: 14
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} className="mx-auto flex max-w-4xl flex-col items-center gap-4 rounded-[1.75rem] border border-white/12 bg-black/70 p-5 text-center shadow-[0_18px_60px_rgba(0,0,0,0.5)] md:flex-row md:text-left">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-3xl">
+                    {chaosOutcome.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-purple-200/70">
+                      Hidden consequence revealed
+                    </p>
+                    <h4 className="mt-1 text-2xl font-black text-white">{chaosOutcome.outcomeTitle}</h4>
+                    <p className="mt-1 text-sm font-semibold text-white/68">{chaosOutcome.outcomeText}</p>
+                    <p className={`mt-2 text-sm font-black ${chaosOutcome.moneyDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {chaosOutcome.moneyDelta >= 0 ? '+' : '-'}${Math.abs(chaosOutcome.moneyDelta)}
+                      {chaosOutcome.skipNextTurn ? ' · next turn starts shaken' : ''}
+                    </p>
+                  </div>
+                  <button onClick={continueChaosRealm} className="rounded-full bg-white px-7 py-3 font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.22)]">
+                    {chaosOutcome.escape || chaosSceneIndex >= chaosRealmScenes.length - 1 ? 'Return to the Board' : 'Keep Moving'}
+                  </button>
+                </motion.div>}
+            </div>
+          </div>
         </div>}
 
       {/* ========== CAREER SWITCH ========== */}
