@@ -66,6 +66,9 @@ const HOP_DURATION_MS = 440;
 // Vertical bounds for the focused lane in zoomed view.
 const ZOOMED_LANE_TOP_PCT = 12;
 const ZOOMED_LANE_BOTTOM_PCT = 86;
+const ZOOMED_ACTIVE_CARD_Y_PCT = 62;
+const ZOOMED_CARD_STEP_PX = 86;
+const ZOOMED_VISIBLE_CARD_RANGE = 3;
 // In overview, every lane spans this vertical range so all pawns stay visible.
 const OVERVIEW_LANE_TOP_PCT = 18;
 const OVERVIEW_LANE_BOTTOM_PCT = 86;
@@ -276,7 +279,7 @@ export function RoadView(props: RoadViewProps) {
     hopping
   } = useStepAnimation(currentPlayer.position, `${currentPlayer.id}-${activePathIdx}`);
   const clampedZoomedPos = Math.max(0, Math.min(zoomedDisplayPos, totalTilesZoomed - 1));
-  const zoomedPawnYPct = getLaneYPct(clampedZoomedPos, totalTilesZoomed, ZOOMED_LANE_TOP_PCT, ZOOMED_LANE_BOTTOM_PCT);
+  const zoomedPawnYPct = ZOOMED_ACTIVE_CARD_Y_PCT;
   return <div className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
       <AnimatePresence>
         {!isZoomed && <motion.div key="overview" initial={{
@@ -415,23 +418,27 @@ export function RoadView(props: RoadViewProps) {
 
             {/* Full connected route: every space is visible and linked */}
             {zoomedTilesOnPath.map((tileId, idx) => {
-          const yPct = getLaneYPct(idx, totalTilesZoomed, ZOOMED_LANE_TOP_PCT, ZOOMED_LANE_BOTTOM_PCT);
-          const nextYPct = idx < totalTilesZoomed - 1 ? getLaneYPct(idx + 1, totalTilesZoomed, ZOOMED_LANE_TOP_PCT, ZOOMED_LANE_BOTTOM_PCT) : null;
+          const distanceFromCurrent = idx - clampedZoomedPos;
+          if (Math.abs(distanceFromCurrent) > ZOOMED_VISIBLE_CARD_RANGE + 1) return null;
+          const nextDistanceFromCurrent = idx + 1 - clampedZoomedPos;
+          const showConnector = idx < totalTilesZoomed - 1 && Math.abs(nextDistanceFromCurrent) <= ZOOMED_VISIBLE_CARD_RANGE + 1;
+          const spaceCenterTop = `calc(${zoomedPawnYPct}% - ${distanceFromCurrent * ZOOMED_CARD_STEP_PX}px)`;
+          const connectorCenterTop = `calc(${zoomedPawnYPct}% - ${(distanceFromCurrent + 0.5) * ZOOMED_CARD_STEP_PX}px)`;
           const isCheckpoint = idx % 5 === 0 || idx === totalTilesZoomed - 1;
-          const isCurrent = idx === clampedZoomedPos;
+          const isCurrent = distanceFromCurrent === 0;
           return <Fragment key={`zoomed-space-${tileId}-${idx}`}>
-                  {nextYPct !== null && <div className="absolute left-1/2 -translate-x-1/2 rounded-full" style={{
-              top: `${nextYPct}%`,
-              height: `${Math.max(0.8, yPct - nextYPct)}%`,
-              width: 6,
+                  {showConnector && <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{
+              top: connectorCenterTop,
+              height: ZOOMED_CARD_STEP_PX - 18,
+              width: 8,
               background: `linear-gradient(180deg, ${neon}66, ${neon}24)`,
               boxShadow: `0 0 10px ${neon}66`,
               zIndex: 12
             }} />}
                   <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white/30" style={{
-              top: `${yPct}%`,
-              width: isCheckpoint ? 106 : 84,
-              height: isCheckpoint ? 16 : 12,
+              top: spaceCenterTop,
+              width: isCheckpoint ? 122 : 102,
+              height: isCheckpoint ? 18 : 14,
               background: isCurrent ? `linear-gradient(90deg, ${neon}cc, ${neon}99)` : 'linear-gradient(90deg, rgba(34,34,58,0.95), rgba(24,24,42,0.9))',
               boxShadow: isCurrent ? `0 0 22px ${neon}aa` : '0 0 8px rgba(0,0,0,0.5)',
               zIndex: 14
@@ -445,32 +452,32 @@ export function RoadView(props: RoadViewProps) {
 
             {/* Local readable cards pinned to fixed lane spaces */}
             {zoomedTilesOnPath.map((tileId, idx) => {
-          const yPct = getLaneYPct(idx, totalTilesZoomed, ZOOMED_LANE_TOP_PCT, ZOOMED_LANE_BOTTOM_PCT);
           const distanceFromCurrent = idx - clampedZoomedPos;
-          if (Math.abs(distanceFromCurrent) > 3) return null;
+          if (Math.abs(distanceFromCurrent) > ZOOMED_VISIBLE_CARD_RANGE) return null;
           const tile = getTileById(tileId);
           const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
           const TileIcon = styleInfo.icon;
           const isCurrent = distanceFromCurrent === 0;
-          return <motion.div key={`card-${tileId}-${idx}`} className={`absolute left-1/2 flex min-h-[68px] w-[min(86vw,330px)] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl border px-4 py-2 shadow-2xl backdrop-blur-xl ${styleInfo.bg} ${styleInfo.border}`} style={{
-            top: `${yPct}%`,
+          const cardCenterTop = `calc(${zoomedPawnYPct}% - ${distanceFromCurrent * ZOOMED_CARD_STEP_PX}px)`;
+          return <motion.div key={`card-${tileId}-${idx}`} className={`absolute left-1/2 flex w-[min(74vw,220px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-2 text-center shadow-2xl backdrop-blur-xl ${styleInfo.bg} ${styleInfo.border}`} style={{
+            top: cardCenterTop,
             borderColor: isCurrent ? neon : undefined,
-            opacity: isCurrent ? 1 : Math.max(0.45, 0.75 - Math.abs(distanceFromCurrent) * 0.12),
+            opacity: isCurrent ? 1 : Math.max(0.5, 0.82 - Math.abs(distanceFromCurrent) * 0.14),
             boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : '0 10px 22px rgba(0,0,0,0.3)',
             zIndex: isCurrent ? 23 : 20
           }} animate={{
-            scale: isCurrent ? [1, 1.02, 1] : 0.98
+            scale: isCurrent ? [1, 1.03, 1] : 0.97
           }} transition={{
             duration: 0.24
           }}>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/85 shadow-inner">
-                      <TileIcon className="h-5 w-5 text-slate-700" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 shadow-inner">
+                      <TileIcon className="h-4 w-4 text-slate-700" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
                         Space {idx + 1}
                       </p>
-                      <p className="truncate text-sm font-black text-slate-900">{tile.name}</p>
+                      <p className="max-w-[170px] truncate text-xs font-black text-slate-900">{tile.name}</p>
                     </div>
                     {isCurrent && <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white" style={{
                 background: neon,
@@ -484,8 +491,8 @@ export function RoadView(props: RoadViewProps) {
             {/* Pawn anchor: keeps the pawn visually attached to the active space */}
             <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" style={{
           top: `${zoomedPawnYPct}%`,
-          width: 126,
-          height: 28,
+          width: 142,
+          height: 32,
           background: `radial-gradient(circle, ${neon}88 0%, ${neon}22 60%, transparent 100%)`,
           boxShadow: `0 0 20px ${neon}88`,
           zIndex: 25
@@ -500,7 +507,7 @@ export function RoadView(props: RoadViewProps) {
             <motion.div className="absolute" initial={false} style={{
           left: `${ZOOMED_LANE_X}%`,
           top: `${zoomedPawnYPct}%`,
-          transform: 'translate(-50%, -84%)',
+          transform: 'translate(-50%, -100%)',
           filter: `drop-shadow(0 0 28px ${neon}cc)`,
           zIndex: 30
         }} animate={{
