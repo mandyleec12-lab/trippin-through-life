@@ -401,56 +401,133 @@ function useStepAnimation(targetPos: number, resetKey: string): {
 // ─────────────────────────────────────────────────────────────────────────────
 const LANE_LABELS = ['College', 'High School / GED', 'Dropout'];
 const LANE_DISTRICTS = ['Campus Corridor', 'GED Midtown', 'Hustle Row'];
-const CITY_BLOCKS = [
-  { left: '5%', top: '10%', width: '17%', height: '24%', label: 'apartments', glow: '#38bdf8', stories: 6 },
-  { left: '24%', top: '12%', width: '11%', height: '14%', label: 'office', glow: '#f472b6', stories: 4 },
-  { left: '65%', top: '10%', width: '17%', height: '24%', label: 'hotel', glow: '#f97316', stories: 7 },
-  { left: '82%', top: '30%', width: '12%', height: '22%', label: 'garage', glow: '#a78bfa', stories: 5 },
-  { left: '5%', top: '39%', width: '15%', height: '20%', label: 'market', glow: '#34d399', stories: 4 },
-  { left: '72%', top: '55%', width: '18%', height: '18%', label: 'studio', glow: '#ec4899', stories: 4 },
-  { left: '11%', top: '67%', width: '15%', height: '22%', label: 'shops', glow: '#f59e0b', stories: 5 },
-  { left: '78%', top: '75%', width: '13%', height: '14%', label: 'mall', glow: '#60a5fa', stories: 3 },
-  { left: '4%', top: '86%', width: '18%', height: '10%', label: 'diner', glow: '#fb7185', stories: 3 },
-  { left: '75%', top: '88%', width: '17%', height: '9%', label: 'arcade', glow: '#22d3ee', stories: 4 }
-];
-const BILLBOARD_SITES = [
-  { left: '10%', top: '27%', text: 'YOU DECIDE', color: '#38bdf8', rotate: -4 },
-  { left: '68%', top: '23%', text: 'LIVE YOUR DREAMS', color: '#f97316', rotate: 3 },
-  { left: '9%', top: '55%', text: 'GOOD EATS', color: '#a855f7', rotate: -6 },
-  { left: '77%', top: '68%', text: 'NO RISK NO REWARD', color: '#ec4899', rotate: 5 }
-];
-const CITY_SIDE_STREETS = [
-  { left: '0%', top: '21%', width: '102%', rotate: -8 },
-  { left: '-4%', top: '49%', width: '108%', rotate: 7 },
-  { left: '6%', top: '78%', width: '92%', rotate: -5 },
-  { left: '-8%', top: '91%', width: '112%', rotate: 4 },
-  { left: '29%', top: '6%', width: '86%', rotate: 79 },
-  { left: '64%', top: '8%', width: '82%', rotate: 101 }
-];
-const STREET_LIGHTS = [
-  { left: '34%', top: '72%' },
-  { left: '60%', top: '70%' },
-  { left: '38%', top: '57%' },
-  { left: '62%', top: '52%' },
-  { left: '43%', top: '38%' },
-  { left: '58%', top: '34%' },
-  { left: '47%', top: '22%' },
-  { left: '54%', top: '20%' }
-];
-const UPRIGHT_CITY_FACADES = [
-  { side: 'left', left: '0%', top: '6%', width: '18%', height: '44%', label: 'LOANS', accent: '#f43f5e', windows: 18 },
-  { side: 'left', left: '13%', top: '24%', width: '12%', height: '34%', label: 'CAFE', accent: '#22d3ee', windows: 12 },
-  { side: 'left', left: '3%', top: '54%', width: '19%', height: '32%', label: 'MARKET', accent: '#f59e0b', windows: 15 },
-  { side: 'right', left: '82%', top: '8%', width: '18%', height: '42%', label: 'DREAMS', accent: '#a855f7', windows: 18 },
-  { side: 'right', left: '75%', top: '31%', width: '15%', height: '35%', label: 'ARCADE', accent: '#34d399', windows: 12 },
-  { side: 'right', left: '82%', top: '61%', width: '16%', height: '28%', label: 'MOTEL', accent: '#ec4899', windows: 10 }
-];
-const ROADSIDE_PROPS = [
-  { left: '12%', top: '73%', label: 'BUS STOP', color: '#38bdf8' },
-  { left: '85%', top: '69%', label: 'OPEN 24H', color: '#f472b6' },
-  { left: '9%', top: '43%', label: 'CHOICES', color: '#f59e0b' },
-  { left: '82%', top: '46%', label: 'NO RISK', color: '#fb7185' }
-];
+function CinematicCityBackdrop({ accent }: {accent: string;}) {
+  const backgroundTowers = Array.from({ length: 14 });
+  const leftWindows = Array.from({ length: 48 });
+  const rightWindows = Array.from({ length: 44 });
+  const rainReflections = Array.from({ length: 18 });
+  return <div className="absolute inset-0 overflow-hidden bg-slate-950 pointer-events-none" style={{
+    zIndex: 0
+  }}>
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="cinematic-sky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#07112a" />
+            <stop offset="46%" stopColor="#130c2b" />
+            <stop offset="100%" stopColor="#050711" />
+          </linearGradient>
+          <linearGradient id="wet-road" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#101725" />
+            <stop offset="42%" stopColor="#060912" />
+            <stop offset="100%" stopColor="#02040b" />
+          </linearGradient>
+          <linearGradient id="left-sidewalk" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#111827" />
+            <stop offset="100%" stopColor="#050711" />
+          </linearGradient>
+          <linearGradient id="right-sidewalk" x1="1" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#111827" />
+            <stop offset="100%" stopColor="#050711" />
+          </linearGradient>
+          <filter id="soft-neon" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="distant-blur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.2" />
+          </filter>
+          <radialGradient id="street-haze" cx="50%" cy="36%" r="58%">
+            <stop offset="0%" stopColor={`${accent}66`} />
+            <stop offset="42%" stopColor="rgba(56,189,248,0.16)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+        </defs>
+
+        <rect width="1000" height="700" fill="url(#cinematic-sky)" />
+        <rect width="1000" height="700" fill="url(#street-haze)" opacity="0.58" />
+
+        <g filter="url(#distant-blur)" opacity="0.82">
+          {backgroundTowers.map((_, index) => {
+            const x = 82 + index * 64;
+            const height = 145 + index % 5 * 34;
+            const width = 38 + index % 3 * 14;
+            return <g key={`tower-${index}`}>
+                <rect x={x} y={240 - height} width={width} height={height + 150} rx="3" fill={index % 2 === 0 ? '#101827' : '#151324'} />
+                {Array.from({ length: 10 }).map((__, windowIndex) => <rect key={windowIndex} x={x + 7 + windowIndex % 3 * 11} y={260 - height + Math.floor(windowIndex / 3) * 18} width="4" height="7" rx="1" fill={windowIndex % 4 === 0 ? '#fef3c7' : '#38bdf855'} />)}
+              </g>;
+          })}
+        </g>
+
+        <polygon points="0,700 356,700 461,205 0,280" fill="url(#left-sidewalk)" />
+        <polygon points="1000,700 644,700 539,205 1000,280" fill="url(#right-sidewalk)" />
+        <polygon points="356,700 644,700 539,205 461,205" fill="url(#wet-road)" />
+        <polygon points="366,700 392,700 470,210 462,210" fill="#f59e0b" opacity="0.72" />
+        <polygon points="608,700 634,700 538,210 530,210" fill="#f59e0b" opacity="0.72" />
+        <path d="M 500 205 L 500 700" stroke="rgba(255,255,255,0.18)" strokeWidth="3" strokeDasharray="22 34" />
+
+        <g>
+          <polygon points="-55,700 250,700 410,192 36,122" fill="#120b18" />
+          <polygon points="250,700 330,680 438,212 410,192" fill="#080a12" />
+          <polygon points="-20,118 410,192 410,150 20,76" fill="#1a1024" />
+          <rect x="36" y="92" width="184" height="74" rx="8" fill="#16080b" stroke="#ef4444" strokeWidth="2" filter="url(#soft-neon)" />
+          <text x="128" y="140" textAnchor="middle" fill="#ff705d" fontSize="36" fontWeight="900" letterSpacing="5">LOANS</text>
+          {leftWindows.map((_, index) => <rect key={`left-window-${index}`} x={52 + index % 6 * 30} y={188 + Math.floor(index / 6) * 48} width="13" height="18" rx="2" fill={index % 4 === 0 ? '#fbbf24aa' : '#38bdf855'} filter={index % 4 === 0 ? 'url(#soft-neon)' : undefined} />)}
+          <polygon points="234,560 318,540 290,700 214,700" fill="#171923" opacity="0.92" />
+        </g>
+
+        <g>
+          <polygon points="1055,700 750,700 590,192 964,122" fill="#100d1d" />
+          <polygon points="750,700 670,680 562,212 590,192" fill="#070911" />
+          <polygon points="1020,118 590,192 590,150 980,76" fill="#171029" />
+          <rect x="746" y="82" width="204" height="86" rx="8" fill="#10081f" stroke="#a855f7" strokeWidth="2" filter="url(#soft-neon)" />
+          <text x="848" y="116" textAnchor="middle" fill="#e9d5ff" fontSize="21" fontWeight="900" letterSpacing="2">LIVE YOUR</text>
+          <text x="848" y="147" textAnchor="middle" fill="#fb3ca6" fontSize="31" fontWeight="900" fontStyle="italic">DREAMS</text>
+          <rect x="746" y="198" width="190" height="52" rx="5" fill="#061411" stroke="#34d399" strokeWidth="2" filter="url(#soft-neon)" />
+          <text x="841" y="229" textAnchor="middle" fill="#86efac" fontSize="18" fontWeight="900">OPPORTUNITY IS HERE</text>
+          {rightWindows.map((_, index) => <rect key={`right-window-${index}`} x={784 + index % 5 * 30} y={286 + Math.floor(index / 5) * 44} width="13" height="17" rx="2" fill={index % 5 === 0 ? '#f472b6aa' : '#93c5fd55'} filter={index % 5 === 0 ? 'url(#soft-neon)' : undefined} />)}
+        </g>
+
+        <g opacity="0.95">
+          {[230, 760].map((x, index) => <g key={`streetlight-${index}`}>
+              <path d={`M ${x} 620 L ${index === 0 ? 374 : 626} 260`} stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+              <path d={`M ${index === 0 ? 374 : 626} 260 Q ${index === 0 ? 430 : 570} 230 ${index === 0 ? 456 : 544} 250`} stroke="#475569" strokeWidth="5" fill="none" />
+              <ellipse cx={index === 0 ? 456 : 544} cy="254" rx="30" ry="10" fill="#fde68a" filter="url(#soft-neon)" />
+              <polygon points={`${index === 0 ? 426 : 514},260 ${index === 0 ? 486 : 574},260 ${index === 0 ? 548 : 452},700 ${index === 0 ? 252 : 748},700`} fill="#fde68a" opacity="0.08" />
+            </g>)}
+        </g>
+
+        <g>
+          <rect x="94" y="435" width="102" height="42" rx="5" fill="#170b18" stroke="#f472b6" filter="url(#soft-neon)" />
+          <text x="145" y="460" textAnchor="middle" fill="#f9a8d4" fontSize="14" fontWeight="900">CHOICES</text>
+          <path d="M145 477 L145 608" stroke="#475569" strokeWidth="5" />
+          <rect x="833" y="395" width="96" height="42" rx="5" fill="#1a080d" stroke="#fb7185" filter="url(#soft-neon)" />
+          <text x="881" y="421" textAnchor="middle" fill="#fda4af" fontSize="13" fontWeight="900">NO RISK</text>
+          <path d="M881 437 L881 590" stroke="#475569" strokeWidth="5" />
+        </g>
+
+        <g opacity="0.56">
+          {rainReflections.map((_, index) => <ellipse key={`reflection-${index}`} cx={210 + index * 36} cy={560 + index % 4 * 28} rx={50 + index % 3 * 18} ry="5" fill={index % 2 === 0 ? '#a855f7' : '#38bdf8'} filter="url(#soft-neon)" />)}
+          <path d="M 404 690 C 430 604 453 420 481 224" stroke={accent} strokeWidth="16" opacity="0.18" filter="url(#soft-neon)" />
+          <path d="M 596 690 C 570 604 547 420 519 224" stroke="#f97316" strokeWidth="16" opacity="0.14" filter="url(#soft-neon)" />
+        </g>
+      </svg>
+
+      <div className="absolute inset-0" style={{
+      background: 'linear-gradient(180deg, rgba(2,6,23,0.06) 0%, transparent 32%, rgba(2,6,23,0.42) 100%), radial-gradient(ellipse at 50% 64%, transparent 0%, transparent 46%, rgba(0,0,0,0.42) 100%)'
+    }} />
+      <motion.div className="absolute inset-x-0 top-[18%] h-[30%] bg-cyan-200/10 blur-3xl" animate={{
+      opacity: [0.16, 0.34, 0.18],
+      x: ['-4%', '4%', '-4%']
+    }} transition={{
+      duration: 7,
+      repeat: Infinity,
+      ease: 'easeInOut'
+    }} />
+    </div>;
+}
 
 // MAIN COMPONENT
 export function RoadView(props: RoadViewProps) {
@@ -518,6 +595,7 @@ export function RoadView(props: RoadViewProps) {
     perspective: 980,
     perspectiveOrigin: '50% 78%'
   }}>
+      <CinematicCityBackdrop accent={neon} />
       <motion.div className="absolute left-0 top-0" style={{
       width: worldWidth,
       height: worldHeight,
@@ -533,80 +611,6 @@ export function RoadView(props: RoadViewProps) {
       duration: 0.6,
       ease: [0.22, 1, 0.36, 1]
     }}>
-        {/* Shared city environment for both overview and zoom. Roads below are the same coordinates used for pawn travel. */}
-        <div className="absolute inset-0" style={{
-        background: 'linear-gradient(180deg, rgba(3,7,18,0.16) 0%, rgba(3,7,18,0.5) 58%, rgba(1,3,9,0.86) 100%)'
-      }} />
-        <div className="absolute inset-x-0 top-[7%] bottom-0" style={{
-        backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(250,204,21,0.08), transparent 22%), radial-gradient(circle at 78% 34%, rgba(56,189,248,0.08), transparent 24%), radial-gradient(circle at 55% 56%, rgba(236,72,153,0.08), transparent 28%), linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 74px), linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 88px), linear-gradient(180deg, rgba(15,17,22,0.72), rgba(8,9,13,0.9))',
-        boxShadow: 'inset 0 60px 90px rgba(0,0,0,0.42), inset 0 -90px 90px rgba(0,0,0,0.62)'
-      }} />
-        {CITY_SIDE_STREETS.map((street, index) => <div key={`side-street-${index}`} className="absolute h-8 origin-left rounded-full border-y border-white/10 bg-slate-950/65" style={{
-        left: street.left,
-        top: street.top,
-        width: street.width,
-        transform: `rotate(${street.rotate}deg)`,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -8px 16px rgba(0,0,0,0.45), 0 10px 24px rgba(0,0,0,0.26)',
-        zIndex: 3
-      }}>
-            <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2" style={{
-          backgroundImage: 'repeating-linear-gradient(90deg, rgba(253,224,71,0.6) 0 10px, transparent 10px 23px)'
-        }} />
-          </div>)}
-        {CITY_BLOCKS.map((block, index) => <div key={`city-block-${index}`} className="absolute rounded-xl border border-white/10 overflow-hidden" style={{
-        left: block.left,
-        top: block.top,
-        width: block.width,
-        height: block.height,
-        background: 'linear-gradient(180deg, rgba(34,38,45,0.92), rgba(13,15,20,0.98))',
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 12px 24px 30px rgba(0,0,0,0.48), 0 0 22px ${block.glow}2f`,
-        transform: `translateZ(${18 + index % 3 * 6}px)`,
-        zIndex: 6
-      }}>
-            <div className="absolute inset-x-0 top-0 h-5 bg-white/8" style={{
-          background: `linear-gradient(90deg, rgba(255,255,255,0.16), ${block.glow}26, transparent)`
-        }} />
-            <div className="absolute right-0 top-4 bottom-0 w-4 bg-black/28" />
-            <div className="absolute left-0 right-4 bottom-0 h-4 bg-black/30" />
-            <div className="absolute inset-x-2 top-2 grid gap-1" style={{
-          gridTemplateColumns: `repeat(${block.stories}, minmax(0, 1fr))`
-        }}>
-              {Array.from({ length: block.stories * 3 }).map((_, windowIndex) => <span key={windowIndex} className="h-1 rounded-[2px]" style={{
-            background: windowIndex % 3 !== 1 ? `${block.glow}78` : 'rgba(255,255,255,0.14)',
-            boxShadow: windowIndex % 2 === 0 ? `0 0 10px ${block.glow}` : undefined
-          }} />)}
-            </div>
-            <div className="absolute inset-x-2 bottom-2 rounded-md border border-white/10 bg-black/45 py-1 text-center text-[7px] font-black uppercase tracking-[0.22em] text-white/55">
-              {block.label}
-            </div>
-          </div>)}
-        {BILLBOARD_SITES.map((site, index) => <motion.div key={`billboard-site-${index}`} className="absolute rounded-sm border border-white/15 bg-black/75 px-2 py-1 text-center text-[7px] font-black uppercase tracking-[0.18em] text-white/85" style={{
-        left: site.left,
-        top: site.top,
-        boxShadow: `0 0 15px ${site.color}55, inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 18px rgba(0,0,0,0.36)`,
-        color: site.color,
-        transform: `translateZ(46px) rotate(${site.rotate}deg) rotateX(-${CAMERA_TILT_DEG}deg)`,
-        zIndex: 12
-      }} animate={{
-        opacity: [0.65, 1, 0.7]
-      }} transition={{
-        duration: 2.6 + index * 0.35,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }}>
-            <span className="absolute left-1/2 top-full h-7 w-1 -translate-x-1/2 bg-slate-700/80" />
-            {site.text}
-          </motion.div>)}
-        {STREET_LIGHTS.map((light, index) => <div key={`street-light-${index}`} className="absolute" style={{
-        left: light.left,
-        top: light.top,
-        zIndex: 11
-      }}>
-            <span className="absolute h-8 w-1 rounded-full bg-slate-600/80" />
-            <span className="absolute -left-2 -top-1 h-3 w-5 rounded-full bg-amber-200/90" style={{
-          boxShadow: '0 0 18px rgba(251,191,36,0.9), 0 0 42px rgba(251,191,36,0.45)'
-        }} />
-          </div>)}
         <svg className="absolute inset-0" viewBox={`0 0 ${worldWidth} ${worldHeight}`} preserveAspectRatio="none">
           <defs>
             <filter id="city-road-glow" x="-30%" y="-30%" width="160%" height="160%">
@@ -832,82 +836,7 @@ export function RoadView(props: RoadViewProps) {
           </Fragment>}
       </motion.div>
       <div className="absolute inset-0 pointer-events-none" style={{
-      zIndex: 1
-    }}>
-        {UPRIGHT_CITY_FACADES.map((facade, facadeIndex) => <div key={`upright-facade-${facadeIndex}`} className="absolute overflow-hidden rounded-t-xl border border-white/10" style={{
-        left: facade.left,
-        top: facade.top,
-        width: facade.width,
-        height: facade.height,
-        background: `linear-gradient(180deg, rgba(25,29,46,0.96), rgba(8,10,18,0.98)), radial-gradient(circle at 50% 0%, ${facade.accent}44, transparent 48%)`,
-        boxShadow: `${facade.side === 'left' ? '18px' : '-18px'} 28px 36px rgba(0,0,0,0.52), 0 0 28px ${facade.accent}33`,
-        transform: facade.side === 'left' ? 'skewY(-5deg)' : 'skewY(5deg)',
-        transformOrigin: facade.side === 'left' ? 'right bottom' : 'left bottom'
-      }}>
-            <div className="absolute inset-x-2 top-2 rounded-md border border-white/15 bg-black/55 px-2 py-1 text-center text-[9px] font-black uppercase tracking-[0.18em]" style={{
-          color: facade.accent,
-          boxShadow: `0 0 18px ${facade.accent}88`
-        }}>
-              {facade.label}
-            </div>
-            <div className="absolute left-2 right-2 top-12 grid gap-1.5" style={{
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'
-        }}>
-              {Array.from({ length: facade.windows }).map((_, windowIndex) => <span key={windowIndex} className="h-2 rounded-[2px]" style={{
-            background: windowIndex % 4 === 1 ? 'rgba(255,255,255,0.12)' : `${facade.accent}${windowIndex % 3 === 0 ? 'aa' : '66'}`,
-            boxShadow: windowIndex % 3 === 0 ? `0 0 12px ${facade.accent}` : undefined
-          }} />)}
-            </div>
-            <div className="absolute inset-x-0 bottom-0 h-12 border-t border-white/10 bg-black/35">
-              <div className="mx-auto mt-3 h-8 w-10 rounded-t-lg border border-white/12 bg-black/50" />
-            </div>
-          </div>)}
-
-        {ROADSIDE_PROPS.map((prop, propIndex) => <div key={`roadside-prop-${propIndex}`} className="absolute rounded-md border border-white/15 bg-black/75 px-2 py-1 text-center text-[7px] font-black uppercase tracking-[0.14em]" style={{
-        left: prop.left,
-        top: prop.top,
-        color: prop.color,
-        boxShadow: `0 0 18px ${prop.color}88, 0 14px 24px rgba(0,0,0,0.42)`
-      }}>
-            <span className="absolute left-1/2 top-full h-11 w-1 -translate-x-1/2 bg-slate-700/90" />
-            {prop.label}
-          </div>)}
-
-        {[0, 1, 2].map((carIndex) => <div key={`parked-car-${carIndex}`} className="absolute rounded-xl border border-white/15" style={{
-        left: `${carIndex === 1 ? 82 : 10 + carIndex * 6}%`,
-        bottom: `${9 + carIndex * 11}%`,
-        width: `${54 - carIndex * 4}px`,
-        height: `${22 - carIndex * 2}px`,
-        background: carIndex === 1 ? 'linear-gradient(180deg, #0f172a, #020617)' : 'linear-gradient(180deg, #7f1d1d, #1f0707)',
-        boxShadow: '0 12px 22px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)'
-      }}>
-            <span className="absolute left-2 top-1 h-1.5 w-4 rounded-full bg-sky-200/70" />
-            <span className="absolute right-1 bottom-1 h-1.5 w-2 rounded-full bg-red-400/90" />
-          </div>)}
-      </div>
-      {['left', 'right'].map((side) => <div key={`foreground-${side}`} className={`absolute top-0 bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} w-[15%] pointer-events-none overflow-hidden`} style={{
-      background: side === 'left' ? 'linear-gradient(90deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)' : 'linear-gradient(270deg, rgba(3,5,12,0.8), rgba(9,13,28,0.34), transparent)',
-      maskImage: 'linear-gradient(180deg, transparent 0%, black 12%, black 92%, transparent 100%)',
-      WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 12%, black 92%, transparent 100%)',
-      zIndex: 1
-    }}>
-          {Array.from({ length: 8 }).map((_, index) => <span key={index} className="absolute rounded-[2px]" style={{
-        left: side === 'left' ? `${12 + index % 3 * 22}%` : `${18 + index % 3 * 20}%`,
-        top: `${12 + index * 10}%`,
-        width: `${18 + index % 2 * 10}px`,
-        height: `${3 + index % 3}px`,
-        background: index % 2 === 0 ? 'rgba(244,114,182,0.78)' : 'rgba(56,189,248,0.72)',
-        boxShadow: index % 2 === 0 ? '0 0 16px rgba(244,114,182,0.9)' : '0 0 16px rgba(56,189,248,0.85)'
-      }} />)}
-        </div>)}
-      <div className="absolute inset-x-0 bottom-0 h-[34%] pointer-events-none" style={{
-      background: 'linear-gradient(90deg, rgba(250,204,21,0.42) 0 2px, transparent 2px 18%, transparent 82%, rgba(250,204,21,0.42) 82% calc(82% + 2px), transparent calc(82% + 2px)), linear-gradient(180deg, transparent, rgba(0,0,0,0.34))',
-      clipPath: 'polygon(7% 100%, 27% 0, 73% 0, 93% 100%)',
-      opacity: 0.72,
-      zIndex: 1
-    }} />
-      <div className="absolute inset-0 pointer-events-none" style={{
-      background: 'linear-gradient(180deg, rgba(5,8,18,0.34) 0%, rgba(5,8,18,0.08) 22%, transparent 48%, rgba(2,4,10,0.44) 100%), radial-gradient(ellipse at 50% 72%, transparent 0%, transparent 38%, rgba(0,0,0,0.34) 100%)',
+      background: 'linear-gradient(180deg, rgba(5,8,18,0.12) 0%, transparent 30%, rgba(2,4,10,0.3) 100%), radial-gradient(ellipse at 50% 72%, transparent 0%, transparent 46%, rgba(0,0,0,0.34) 100%)',
       zIndex: 2
     }} />
 
