@@ -3654,6 +3654,66 @@ export function BoardGamePage() {
 
       {/* ========== CHAOS REALM ========== */}
       {phase === 'chaos_realm' && <div className="absolute inset-0 bg-gradient-to-b from-red-950 via-black to-red-950 flex flex-col overflow-hidden z-20">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(127,29,29,0.36),transparent_34%),linear-gradient(180deg,rgba(8,10,24,0.96)_0%,rgba(15,5,12,0.95)_45%,rgba(5,5,8,1)_100%)]" />
+            <motion.div className="absolute inset-x-0 top-0 h-44 bg-slate-950/80 blur-sm" animate={{
+          opacity: [0.7, 0.95, 0.72]
+        }} transition={{
+          duration: 3.2,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }} />
+            {[0, 1, 2].map((bolt) => <motion.div key={`lightning-${bolt}`} className="absolute top-0 h-48 w-px bg-red-100" style={{
+          left: `${24 + bolt * 24}%`,
+          boxShadow: '0 0 24px rgba(248,113,113,0.95), 0 0 70px rgba(239,68,68,0.6)',
+          transform: `skewX(${bolt % 2 === 0 ? -18 : 14}deg)`
+        }} animate={{
+          opacity: [0, 0, 1, 0]
+        }} transition={{
+          duration: 2.8 + bolt * 0.5,
+          repeat: Infinity,
+          delay: bolt * 0.85,
+          times: [0, 0.72, 0.76, 0.82]
+        }} />)}
+            {[0, 1, 2, 3, 4, 5].map((building) => <div key={`chaos-building-${building}`} className="absolute bottom-0 rounded-t-xl border-t border-red-500/20 bg-black/70" style={{
+          left: `${building * 17 - 4}%`,
+          width: `${14 + building % 2 * 6}%`,
+          height: `${34 + building % 3 * 12}%`,
+          boxShadow: '0 0 28px rgba(127,29,29,0.32), inset 0 1px 0 rgba(248,113,113,0.12)'
+        }}>
+                <div className="absolute inset-x-3 top-5 grid grid-cols-3 gap-2">
+                  {Array.from({ length: 18 }).map((_, windowIndex) => <span key={windowIndex} className="h-1 rounded-sm" style={{
+              background: windowIndex % 5 === 0 ? 'rgba(248,113,113,0.82)' : 'rgba(255,255,255,0.07)',
+              boxShadow: windowIndex % 5 === 0 ? '0 0 10px rgba(248,113,113,0.9)' : undefined
+            }} />)}
+                </div>
+                {building % 2 === 0 && <div className="absolute left-3 top-16 rotate-[-8deg] rounded border border-red-500/40 bg-black/80 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-red-400 shadow-[0_0_18px_rgba(239,68,68,0.45)]">
+                    BROKEN
+                  </div>}
+              </div>)}
+            <div className="absolute inset-x-0 bottom-0 h-1/2" style={{
+          background: 'linear-gradient(90deg, rgba(127,29,29,0.4) 0 2px, transparent 2px 18%, transparent 82%, rgba(127,29,29,0.4) 82% calc(82% + 2px), transparent calc(82% + 2px)), radial-gradient(ellipse at 50% 100%, rgba(239,68,68,0.24), transparent 55%)'
+        }} />
+            {[0, 1, 2, 3].map((trash) => <div key={`trash-${trash}`} className="absolute bottom-16 h-8 w-10 rounded-md border border-red-900/70 bg-slate-900/90" style={{
+          left: `${10 + trash * 25}%`,
+          transform: `rotate(${trash % 2 === 0 ? -15 : 12}deg)`,
+          boxShadow: '0 10px 18px rgba(0,0,0,0.5)'
+        }}>
+                <span className="absolute -right-3 top-5 h-2 w-8 rounded-full bg-red-950/80" />
+              </div>)}
+            {Array.from({ length: 34 }).map((_, rain) => <motion.span key={`chaos-rain-${rain}`} className="absolute top-[-12%] h-16 w-px rounded-full bg-sky-200/40" style={{
+          left: `${rain / 34 * 100}%`
+        }} animate={{
+          y: ['0vh', '118vh'],
+          opacity: [0, 0.8, 0]
+        }} transition={{
+          duration: 0.9 + rain % 5 * 0.08,
+          repeat: Infinity,
+          delay: rain * 0.035,
+          ease: 'linear'
+        }} />)}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,transparent_0%,transparent_48%,rgba(0,0,0,0.62)_100%)]" />
+          </div>
           <FloatingParticles count={60} />
 
           {/* Entry Transition Overlay */}
