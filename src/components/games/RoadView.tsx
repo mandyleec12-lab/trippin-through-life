@@ -62,8 +62,6 @@ const OVERVIEW_LANE_X: Record<number, number> = {
 };
 // In zoomed mode the active lane is centered on screen.
 const ZOOMED_LANE_X = 50;
-// Spacing along the zoomed lane for each card/space.
-const TILE_SPACING_PX_ZOOMED = 110;
 const HOP_DURATION_MS = 440;
 // Vertical bounds for the focused lane in zoomed view.
 const ZOOMED_LANE_TOP_PCT = 12;
@@ -90,12 +88,15 @@ function Pawn3D({
     width: 132 * scale,
     height: 168 * scale
   }} animate={hopping ? {
-    y: [0, -52 * scale, 0],
-    scale: [1, 1.06, 1]
+    y: [0, -56 * scale, 0],
+    scaleX: [1, 0.97, 1.05, 1],
+    scaleY: [1, 1.08, 0.92, 1]
   } : {
-    y: [0, -8 * scale, 0]
+    y: [0, -6 * scale, 0],
+    scaleX: [1, 1.01, 1],
+    scaleY: [1, 0.99, 1]
   }} transition={{
-    duration: hopping ? HOP_DURATION_MS / 1000 : 1.8,
+    duration: hopping ? HOP_DURATION_MS * 0.72 / 1000 : 1.8,
     repeat: hopping ? 0 : Infinity,
     ease: hopping ? [0.22, 1, 0.36, 1] : 'easeInOut'
   }}>
@@ -223,14 +224,21 @@ function useStepAnimation(targetPos: number, resetKey: string): {
       setHopping(false);
       return;
     }
+    // Pulse hop state for each tile so movement reads as distinct jumps.
     setHopping(true);
-    const timer = setTimeout(() => {
+    const settleTimer = setTimeout(() => {
+      setHopping(false);
+    }, HOP_DURATION_MS * 0.72);
+    const stepTimer = setTimeout(() => {
       setDisplayPos((prev) => {
         if (prev === targetPos) return prev;
         return prev + (targetPos > prev ? 1 : -1);
       });
     }, HOP_DURATION_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(settleTimer);
+      clearTimeout(stepTimer);
+    };
   }, [displayPos, targetPos]);
   return {
     displayPos,
@@ -397,6 +405,13 @@ export function RoadView(props: RoadViewProps) {
           background: 'linear-gradient(180deg, rgba(10,10,24,0.85), rgba(14,12,34,0.9))',
           boxShadow: `0 0 24px ${neon}33`
         }} />
+            <div className="absolute left-1/2 top-[12%] bottom-[13%] w-[min(82vw,180px)] -translate-x-1/2 rounded-[1.45rem]" style={{
+          background: `linear-gradient(180deg, ${neon}18, rgba(14,14,36,0.78) 28%, rgba(12,12,32,0.88) 72%, ${neon}14)`,
+          boxShadow: `inset 0 0 20px ${neon}40`
+        }} />
+            <div className="absolute left-1/2 top-[12%] bottom-[13%] w-[min(84vw,200px)] -translate-x-1/2 rounded-[1.6rem] border border-white/8" style={{
+          boxShadow: `inset 0 0 0 2px ${neon}22, 0 0 20px ${neon}20`
+        }} />
 
             {/* Full connected route: every space is visible and linked */}
             {zoomedTilesOnPath.map((tileId, idx) => {
@@ -410,14 +425,16 @@ export function RoadView(props: RoadViewProps) {
               height: `${Math.max(0.8, yPct - nextYPct)}%`,
               width: 6,
               background: `linear-gradient(180deg, ${neon}66, ${neon}24)`,
-              boxShadow: `0 0 10px ${neon}66`
+              boxShadow: `0 0 10px ${neon}66`,
+              zIndex: 12
             }} />}
                   <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white/30" style={{
               top: `${yPct}%`,
               width: isCheckpoint ? 106 : 84,
               height: isCheckpoint ? 16 : 12,
               background: isCurrent ? `linear-gradient(90deg, ${neon}cc, ${neon}99)` : 'linear-gradient(90deg, rgba(34,34,58,0.95), rgba(24,24,42,0.9))',
-              boxShadow: isCurrent ? `0 0 22px ${neon}aa` : '0 0 8px rgba(0,0,0,0.5)'
+              boxShadow: isCurrent ? `0 0 22px ${neon}aa` : '0 0 8px rgba(0,0,0,0.5)',
+              zIndex: 14
             }} animate={isCurrent ? {
               scale: [1, 1.06, 1]
             } : undefined} transition={{
@@ -426,8 +443,9 @@ export function RoadView(props: RoadViewProps) {
                 </Fragment>;
         })}
 
-            {/* Local readable cards that stay centered around the pawn */}
+            {/* Local readable cards pinned to fixed lane spaces */}
             {zoomedTilesOnPath.map((tileId, idx) => {
+          const yPct = getLaneYPct(idx, totalTilesZoomed, ZOOMED_LANE_TOP_PCT, ZOOMED_LANE_BOTTOM_PCT);
           const distanceFromCurrent = idx - clampedZoomedPos;
           if (Math.abs(distanceFromCurrent) > 3) return null;
           const tile = getTileById(tileId);
@@ -435,14 +453,15 @@ export function RoadView(props: RoadViewProps) {
           const TileIcon = styleInfo.icon;
           const isCurrent = distanceFromCurrent === 0;
           return <motion.div key={`card-${tileId}-${idx}`} className={`absolute left-1/2 flex min-h-[68px] w-[min(86vw,330px)] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl border px-4 py-2 shadow-2xl backdrop-blur-xl ${styleInfo.bg} ${styleInfo.border}`} style={{
-            top: `calc(${zoomedPawnYPct}% - ${distanceFromCurrent * (TILE_SPACING_PX_ZOOMED * 0.58)}px)`,
+            top: `${yPct}%`,
             borderColor: isCurrent ? neon : undefined,
-            opacity: isCurrent ? 1 : 0.66,
-            boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : '0 10px 22px rgba(0,0,0,0.3)'
+            opacity: isCurrent ? 1 : Math.max(0.45, 0.75 - Math.abs(distanceFromCurrent) * 0.12),
+            boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : '0 10px 22px rgba(0,0,0,0.3)',
+            zIndex: isCurrent ? 23 : 20
           }} animate={{
-            scale: isCurrent ? 1.03 : 0.98
+            scale: isCurrent ? [1, 1.02, 1] : 0.98
           }} transition={{
-            duration: 0.22
+            duration: 0.24
           }}>
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/85 shadow-inner">
                       <TileIcon className="h-5 w-5 text-slate-700" />
@@ -468,19 +487,22 @@ export function RoadView(props: RoadViewProps) {
           width: 126,
           height: 28,
           background: `radial-gradient(circle, ${neon}88 0%, ${neon}22 60%, transparent 100%)`,
-          boxShadow: `0 0 20px ${neon}88`
+          boxShadow: `0 0 20px ${neon}88`,
+          zIndex: 25
         }} animate={{
-          scale: hopping ? [1, 1.12, 1] : [1, 1.04, 1]
+          scaleX: hopping ? [1, 0.94, 1.08, 1] : [1, 1.03, 1],
+          scaleY: hopping ? [1, 1.06, 0.94, 1] : [1, 0.98, 1]
         }} transition={{
-          duration: hopping ? HOP_DURATION_MS / 1000 : 1.5
+          duration: hopping ? HOP_DURATION_MS * 0.72 / 1000 : 1.5
         }} />
 
             {/* Active player pawn — unchanged design, now centered on visible spaces */}
             <motion.div className="absolute" initial={false} style={{
           left: `${ZOOMED_LANE_X}%`,
           top: `${zoomedPawnYPct}%`,
-          transform: 'translate(-50%, -92%)',
-          filter: `drop-shadow(0 0 28px ${neon}cc)`
+          transform: 'translate(-50%, -84%)',
+          filter: `drop-shadow(0 0 28px ${neon}cc)`,
+          zIndex: 30
         }} animate={{
           top: `${zoomedPawnYPct}%`
         }} transition={{
