@@ -61,6 +61,8 @@ const BOARD_MIN_WORLD_HEIGHT_PX = 3300;
 const BOARD_WORLD_WIDTH_MULTIPLIER = 2.05;
 const BOARD_WORLD_HEIGHT_MULTIPLIER = 4.6;
 const CAMERA_Y_ANCHOR = 0.56;
+const CAMERA_TILT_DEG = 11;
+const CAMERA_ROLL_DEG = -1.25;
 const NEARBY_OTHER_LANE_CARD_WINDOW = 0.34;
 type LanePoint = {
   x: number;
@@ -407,7 +409,9 @@ const CITY_BLOCKS = [
   { left: '5%', top: '39%', width: '15%', height: '20%', label: 'market', glow: '#34d399', stories: 4 },
   { left: '72%', top: '55%', width: '18%', height: '18%', label: 'studio', glow: '#ec4899', stories: 4 },
   { left: '11%', top: '67%', width: '15%', height: '22%', label: 'shops', glow: '#f59e0b', stories: 5 },
-  { left: '78%', top: '75%', width: '13%', height: '14%', label: 'mall', glow: '#60a5fa', stories: 3 }
+  { left: '78%', top: '75%', width: '13%', height: '14%', label: 'mall', glow: '#60a5fa', stories: 3 },
+  { left: '4%', top: '86%', width: '18%', height: '10%', label: 'diner', glow: '#fb7185', stories: 3 },
+  { left: '75%', top: '88%', width: '17%', height: '9%', label: 'arcade', glow: '#22d3ee', stories: 4 }
 ];
 const BILLBOARD_SITES = [
   { left: '10%', top: '27%', text: 'YOU DECIDE', color: '#38bdf8', rotate: -4 },
@@ -419,6 +423,7 @@ const CITY_SIDE_STREETS = [
   { left: '0%', top: '21%', width: '102%', rotate: -8 },
   { left: '-4%', top: '49%', width: '108%', rotate: 7 },
   { left: '6%', top: '78%', width: '92%', rotate: -5 },
+  { left: '-8%', top: '91%', width: '112%', rotate: 4 },
   { left: '29%', top: '6%', width: '86%', rotate: 79 },
   { left: '64%', top: '8%', width: '82%', rotate: 101 }
 ];
@@ -495,15 +500,21 @@ export function RoadView(props: RoadViewProps) {
   const minCameraY = viewportSize.height - worldHeight - viewportSize.height * 0.16;
   const cameraX = clamp(viewportSize.width * 0.5 - activeLanePoint.x, minCameraX, maxCameraX);
   const cameraY = clamp(viewportSize.height * CAMERA_Y_ANCHOR - activeLanePoint.y, minCameraY, maxCameraY);
-  return <div ref={viewportRef} className="absolute inset-0 overflow-hidden z-[5] pointer-events-none">
+  return <div ref={viewportRef} className="absolute inset-0 overflow-hidden z-[5] pointer-events-none" style={{
+    perspective: 1450,
+    perspectiveOrigin: '50% 62%'
+  }}>
       <motion.div className="absolute left-0 top-0" style={{
       width: worldWidth,
       height: worldHeight,
-      transformOrigin: `${activeLanePoint.x}px ${activeLanePoint.y}px`
+      transformOrigin: `${activeLanePoint.x}px ${activeLanePoint.y}px`,
+      transformStyle: 'preserve-3d'
     }} animate={{
       scale: cameraScale,
       x: cameraX,
-      y: cameraY
+      y: cameraY,
+      rotateX: CAMERA_TILT_DEG,
+      rotateZ: CAMERA_ROLL_DEG
     }} transition={{
       duration: 0.6,
       ease: [0.22, 1, 0.36, 1]
@@ -513,7 +524,7 @@ export function RoadView(props: RoadViewProps) {
         background: 'linear-gradient(180deg, rgba(3,7,18,0.16) 0%, rgba(3,7,18,0.5) 58%, rgba(1,3,9,0.86) 100%)'
       }} />
         <div className="absolute inset-x-0 top-[7%] bottom-0" style={{
-        backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(250,204,21,0.08), transparent 22%), radial-gradient(circle at 78% 34%, rgba(56,189,248,0.08), transparent 24%), radial-gradient(circle at 55% 56%, rgba(236,72,153,0.08), transparent 28%), repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 19px), linear-gradient(180deg, rgba(15,17,22,0.72), rgba(8,9,13,0.9))',
+        backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(250,204,21,0.08), transparent 22%), radial-gradient(circle at 78% 34%, rgba(56,189,248,0.08), transparent 24%), radial-gradient(circle at 55% 56%, rgba(236,72,153,0.08), transparent 28%), linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 74px), linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 88px), linear-gradient(180deg, rgba(15,17,22,0.72), rgba(8,9,13,0.9))',
         boxShadow: 'inset 0 60px 90px rgba(0,0,0,0.42), inset 0 -90px 90px rgba(0,0,0,0.62)'
       }} />
         {CITY_SIDE_STREETS.map((street, index) => <div key={`side-street-${index}`} className="absolute h-8 origin-left rounded-full border-y border-white/10 bg-slate-950/65" style={{
@@ -534,9 +545,15 @@ export function RoadView(props: RoadViewProps) {
         width: block.width,
         height: block.height,
         background: 'linear-gradient(180deg, rgba(34,38,45,0.92), rgba(13,15,20,0.98))',
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 30px rgba(0,0,0,0.42), 0 0 18px ${block.glow}1f`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 12px 24px 30px rgba(0,0,0,0.48), 0 0 22px ${block.glow}2f`,
+        transform: `translateZ(${18 + index % 3 * 6}px)`,
         zIndex: 6
       }}>
+            <div className="absolute inset-x-0 top-0 h-5 bg-white/8" style={{
+          background: `linear-gradient(90deg, rgba(255,255,255,0.16), ${block.glow}26, transparent)`
+        }} />
+            <div className="absolute right-0 top-4 bottom-0 w-4 bg-black/28" />
+            <div className="absolute left-0 right-4 bottom-0 h-4 bg-black/30" />
             <div className="absolute inset-x-2 top-2 grid gap-1" style={{
           gridTemplateColumns: `repeat(${block.stories}, minmax(0, 1fr))`
         }}>
@@ -554,7 +571,7 @@ export function RoadView(props: RoadViewProps) {
         top: site.top,
         boxShadow: `0 0 15px ${site.color}55, inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 18px rgba(0,0,0,0.36)`,
         color: site.color,
-        transform: `rotate(${site.rotate}deg)`,
+        transform: `translateZ(46px) rotate(${site.rotate}deg) rotateX(-${CAMERA_TILT_DEG}deg)`,
         zIndex: 12
       }} animate={{
         opacity: [0.65, 1, 0.7]
@@ -697,7 +714,7 @@ export function RoadView(props: RoadViewProps) {
               top: point.y,
               width,
               height,
-              transform: `translate(-50%, -50%) rotate(${tileRotate}deg)`,
+              transform: `translate(-50%, -50%) translateZ(${showDetailedCard ? 46 : 22}px) rotate(${tileRotate}deg) rotateX(${showDetailedCard ? -CAMERA_TILT_DEG : -4}deg)`,
               transformOrigin: 'center center',
               borderColor: isCurrent ? neon : `${laneColor}${showDetailedCard ? '88' : '66'}`,
               background: showDetailedCard ? `linear-gradient(135deg, rgba(42,43,46,0.98), rgba(25,27,31,0.98) 58%, ${laneColor}2b)` : isCheckpoint ? `linear-gradient(180deg, rgba(58,57,55,0.96), rgba(30,32,35,0.98))` : `linear-gradient(180deg, rgba(49,50,52,0.96), rgba(28,30,33,0.98))`,
@@ -751,7 +768,7 @@ export function RoadView(props: RoadViewProps) {
             return <motion.div key={p.id} className="absolute" style={{
               left: point.x,
               top: point.y,
-              transform: `translate(calc(-50% + ${xOffsetPx}px), -58%)`,
+              transform: `translate(calc(-50% + ${xOffsetPx}px), -58%) translateZ(58px) rotateX(-${CAMERA_TILT_DEG}deg)`,
               filter: isActive ? `drop-shadow(0 0 10px ${laneColor})` : undefined,
               zIndex: 30
             }} animate={{
@@ -785,7 +802,7 @@ export function RoadView(props: RoadViewProps) {
             <motion.div className="absolute" style={{
           left: activeLanePoint.x,
           top: activeLanePoint.y,
-          transform: 'translate(-50%, -100%)',
+          transform: `translate(-50%, -100%) translateZ(88px) rotateX(-${CAMERA_TILT_DEG}deg)`,
           filter: `drop-shadow(0 0 28px ${neon}cc)`,
           zIndex: 40
         }} animate={{
@@ -799,6 +816,10 @@ export function RoadView(props: RoadViewProps) {
             </motion.div>
           </Fragment>}
       </motion.div>
+      <div className="absolute inset-0 pointer-events-none" style={{
+      background: 'linear-gradient(180deg, rgba(5,8,18,0.18) 0%, transparent 28%, transparent 62%, rgba(2,4,10,0.36) 100%), radial-gradient(ellipse at 50% 68%, transparent 0%, transparent 42%, rgba(0,0,0,0.28) 100%)',
+      zIndex: 2
+    }} />
 
     </div>;
 }

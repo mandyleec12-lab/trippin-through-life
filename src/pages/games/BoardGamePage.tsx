@@ -58,6 +58,7 @@ interface TileData {
 type GamePhase = 'setup' | 'starting_deal' | 'journey_start' | 'playing' | 'tax_event' | 'chaos_realm' | 'career_switch' | 'winner';
 const PAWN_STEP_DURATION_MS = 440;
 const PAWN_LANDING_BUFFER_MS = 700;
+const STARTING_HAND_RESHUFFLE_LIMIT = 2;
 // --- JOBS ---
 const ALL_JOBS: Job[] = [
 // --- 🎓 COLLEGE → BEST JOB PATH (Path 0) ---
@@ -2202,6 +2203,7 @@ export function BoardGamePage() {
   const [phase, setPhase] = useState<GamePhase>('setup');
   const [dealRevealReady, setDealRevealReady] = useState(false);
   const [dealSequenceId, setDealSequenceId] = useState(0);
+  const [startingHandReshuffles, setStartingHandReshuffles] = useState(0);
   const [activePathTiles, setActivePathTiles] = useState(DEFAULT_PATH_TILE_ASSIGNMENTS);
   const [players, setPlayers] = useState<Player[]>([{
     id: '1',
@@ -2399,7 +2401,7 @@ export function BoardGamePage() {
     };
     reader.readAsDataURL(file);
   };
-  const dealStartingHands = () => {
+  const assignStartingHands = () => {
     setDealRevealReady(false);
     setDealSequenceId((prev) => prev + 1);
     setFocusedPathIndex(null);
@@ -2436,6 +2438,17 @@ export function BoardGamePage() {
       };
     }));
     setPhase('starting_deal');
+  };
+  const dealStartingHands = () => {
+    setStartingHandReshuffles(0);
+    assignStartingHands();
+  };
+  const reshuffleStartingHands = () => {
+    if (startingHandReshuffles >= STARTING_HAND_RESHUFFLE_LIMIT) return;
+    const confirmed = window.confirm('Are you sure? You could get something worse.');
+    if (!confirmed) return;
+    setStartingHandReshuffles((prev) => prev + 1);
+    assignStartingHands();
   };
   const enterPlayingPhase = () => {
     // Enter the cinematic board for the FIRST and only time. From here on,
@@ -3098,7 +3111,7 @@ export function BoardGamePage() {
             <div className="mx-auto mb-5 flex max-w-4xl items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.9)]" />
               <p className="text-xs md:text-sm font-bold text-white/75">
-                Starting hands are locked. Read your setup, then hit the board.
+                {startingHandReshuffles >= STARTING_HAND_RESHUFFLE_LIMIT ? 'No reshuffles left. This starting hand is locked.' : `Review your starting hand. Reshuffles remaining: ${STARTING_HAND_RESHUFFLE_LIMIT - startingHandReshuffles}.`}
               </p>
             </div>
 
@@ -3234,9 +3247,9 @@ export function BoardGamePage() {
                 Shared life districts and chaos can affect anyone.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button onClick={dealStartingHands} className="px-6 py-3 rounded-full border border-white/15 bg-white/10 text-white/80 font-extrabold hover:bg-white/15 transition">
-                  Shuffle Again
-                </button>
+                {startingHandReshuffles < STARTING_HAND_RESHUFFLE_LIMIT && <button onClick={reshuffleStartingHands} className="px-6 py-3 rounded-full border border-white/15 bg-white/10 text-white/80 font-extrabold hover:bg-white/15 transition">
+                    Reshuffle Hand ({STARTING_HAND_RESHUFFLE_LIMIT - startingHandReshuffles} left)
+                  </button>}
                 <motion.button onClick={startPlaying} whileHover={{
               scale: 1.04
             }} whileTap={{
