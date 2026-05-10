@@ -361,6 +361,23 @@ function useStepAnimation(targetPos: number, resetKey: string): {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 const LANE_LABELS = ['College', 'High School / GED', 'Dropout'];
+const LANE_DISTRICTS = ['Campus Corridor', 'GED Midtown', 'Hustle Row'];
+const CITY_BLOCKS = [
+  { left: '11%', top: '17%', width: '15%', height: '15%', label: 'lofts', glow: '#38bdf8' },
+  { left: '27%', top: '18%', width: '11%', height: '10%', label: 'media', glow: '#f472b6' },
+  { left: '64%', top: '16%', width: '14%', height: '16%', label: 'ads', glow: '#f97316' },
+  { left: '77%', top: '32%', width: '10%', height: '18%', label: 'hotel', glow: '#a78bfa' },
+  { left: '11%', top: '39%', width: '13%', height: '17%', label: 'market', glow: '#34d399' },
+  { left: '70%', top: '55%', width: '15%', height: '15%', label: 'studio', glow: '#ec4899' },
+  { left: '17%', top: '64%', width: '12%', height: '17%', label: 'garage', glow: '#f59e0b' },
+  { left: '79%', top: '73%', width: '10%', height: '12%', label: 'mall', glow: '#60a5fa' }
+];
+const BILLBOARD_SITES = [
+  { left: '18%', top: '30%', text: 'AD SPACE', color: '#38bdf8' },
+  { left: '70%', top: '25%', text: 'BRAND', color: '#f97316' },
+  { left: '14%', top: '58%', text: 'SPONSOR', color: '#a855f7' },
+  { left: '75%', top: '66%', text: 'LOCAL DEAL', color: '#ec4899' }
+];
 
 // MAIN COMPONENT
 export function RoadView(props: RoadViewProps) {
@@ -403,33 +420,78 @@ export function RoadView(props: RoadViewProps) {
       duration: 0.6,
       ease: [0.22, 1, 0.36, 1]
     }}>
-        {/* Shared board world for both overview and zoom */}
-        <div className="absolute left-[8%] right-[8%] top-[11%] bottom-[9%] rounded-[2.4rem] border border-white/10" style={{
-        background: 'linear-gradient(180deg, rgba(10,8,28,0.72) 0%, rgba(10,10,20,0.82) 100%)',
-        boxShadow: 'inset 0 0 60px rgba(0,0,0,0.45), 0 18px 44px rgba(0,0,0,0.35)'
+        {/* Shared city-board world for both overview and zoom. Roads below are the same coordinates used for pawn travel. */}
+        <div className="absolute left-[5%] right-[5%] top-[8%] bottom-[7%] rounded-[2.6rem] border border-white/12" style={{
+        background: 'radial-gradient(circle at 50% 40%, rgba(41,22,76,0.56) 0%, rgba(8,11,24,0.92) 58%, rgba(3,5,13,0.98) 100%)',
+        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.62), 0 24px 54px rgba(0,0,0,0.48)'
       }} />
-        <div className="absolute left-[9%] right-[9%] top-[14%] bottom-[11%] rounded-[2rem] opacity-38" style={{
-        backgroundImage: 'repeating-linear-gradient(155deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1px, transparent 1px, transparent 14px)'
+        <div className="absolute left-[6%] right-[6%] top-[10%] bottom-[9%] rounded-[2.2rem] overflow-hidden opacity-70" style={{
+        backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 48% 46%, rgba(236,72,153,0.16), transparent 46%)',
+        backgroundSize: '8% 8%, 8% 8%, 100% 100%'
       }} />
-        <div className="absolute left-[12%] right-[12%] top-[16%] bottom-[14%] rounded-[1.8rem] border border-white/6" style={{
-        background: 'linear-gradient(180deg, rgba(16,16,30,0.55), rgba(10,10,22,0.6))'
-      }} />
+        {CITY_BLOCKS.map((block, index) => <div key={`city-block-${index}`} className="absolute rounded-xl border border-white/10 overflow-hidden" style={{
+        left: block.left,
+        top: block.top,
+        width: block.width,
+        height: block.height,
+        background: 'linear-gradient(180deg, rgba(22,28,48,0.88), rgba(8,11,24,0.94))',
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.09), 0 0 22px ${block.glow}22`
+      }}>
+            <div className="absolute inset-x-2 top-2 flex gap-1">
+              {Array.from({ length: 5 }).map((_, windowIndex) => <span key={windowIndex} className="h-1.5 flex-1 rounded-full" style={{
+            background: windowIndex % 2 === 0 ? `${block.glow}88` : 'rgba(255,255,255,0.16)',
+            boxShadow: windowIndex % 2 === 0 ? `0 0 10px ${block.glow}` : undefined
+          }} />)}
+            </div>
+            <div className="absolute inset-x-2 bottom-2 rounded-md border border-white/10 bg-black/24 py-1 text-center text-[7px] font-black uppercase tracking-[0.22em] text-white/45">
+              {block.label}
+            </div>
+          </div>)}
+        {BILLBOARD_SITES.map((site, index) => <motion.div key={`billboard-site-${index}`} className="absolute rounded-lg border border-white/15 bg-black/55 px-2 py-1 text-center text-[7px] font-black uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm" style={{
+        left: site.left,
+        top: site.top,
+        boxShadow: `0 0 20px ${site.color}66, inset 0 1px 0 rgba(255,255,255,0.14)`,
+        color: site.color
+      }} animate={{
+        opacity: [0.65, 1, 0.7]
+      }} transition={{
+        duration: 2.6 + index * 0.35,
+        repeat: Infinity,
+        ease: 'easeInOut'
+      }}>
+            {site.text}
+          </motion.div>)}
         <svg className="absolute inset-0" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <filter id="city-road-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="1.4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           {overviewSvgPaths.map((lanePath, laneIdx) => {
           const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
           return <g key={`lane-road-${laneIdx}`}>
-                <path d={lanePath} fill="none" stroke="rgba(12,14,24,0.95)" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" />
-                <path d={lanePath} fill="none" stroke={`${laneColor}44`} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
-                <path d={lanePath} fill="none" stroke={`${laneColor}88`} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.8 4.4" />
+                <path d={lanePath} fill="none" stroke="rgba(1,4,12,0.86)" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}55`} strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" filter="url(#city-road-glow)" />
+                <path d={lanePath} fill="none" stroke="rgba(13,18,31,0.98)" strokeWidth={10.6} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={1.45} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.2 3.2" filter="url(#city-road-glow)" />
+                <path d={lanePath} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={0.5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="0.35 5.5" />
+                {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
+              const point = getPointOnLaneCurve(overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0], progress);
+              return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={0.55} fill={laneColor} opacity={0.5} />;
+            })}
               </g>;
         })}
         </svg>
-        {/* Overpass hints so crossovers feel intentional, not abstract */}
-        <div className="absolute left-[48%] top-[53%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40" style={{
-        boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+        {/* Overpass seams sit on crossover areas without changing the travel coordinates. */}
+        <div className="absolute left-[48%] top-[53%] h-4 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/55" style={{
+        boxShadow: '0 0 18px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.18)'
       }} />
-        <div className="absolute left-[54%] top-[39%] h-3 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40" style={{
-        boxShadow: '0 0 10px rgba(255,255,255,0.14)'
+        <div className="absolute left-[54%] top-[39%] h-4 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/55" style={{
+        boxShadow: '0 0 18px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.18)'
       }} />
 
         {paths.map((_, laneIdx) => {
@@ -439,7 +501,28 @@ export function RoadView(props: RoadViewProps) {
         const playersOnLane = players.filter((p) => p.pathIndex === laneIdx);
         const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
         const laneIsActive = laneIdx === activePathIdx;
+        const startPoint = getPointOnLaneCurve(laneCurve, 0);
+        const finishPoint = getPointOnLaneCurve(laneCurve, 1);
         return <Fragment key={laneIdx}>
+              {(!isZoomed || laneIsActive) && <Fragment>
+                  <div className="absolute -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-center text-[7px] font-black uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm" style={{
+              left: `${startPoint.x}%`,
+              top: `${Math.min(93, startPoint.y + 4)}%`,
+              boxShadow: `0 0 14px ${laneColor}66`,
+              color: laneColor,
+              zIndex: 16
+            }}>
+                    {LANE_LABELS[laneIdx]}
+                  </div>
+                  <div className="absolute -translate-x-1/2 rounded-full border border-white/12 bg-black/45 px-2 py-0.5 text-center text-[6px] font-black uppercase tracking-[0.2em] text-white/55 backdrop-blur-sm" style={{
+              left: `${finishPoint.x}%`,
+              top: `${Math.max(8, finishPoint.y - 5)}%`,
+              boxShadow: `0 0 12px ${laneColor}44`,
+              zIndex: 16
+            }}>
+                    {LANE_DISTRICTS[laneIdx]}
+                  </div>
+                </Fragment>}
               {tilesOnLane.map((tileId, idx) => {
             const progress = idx / Math.max(1, totalTilesLane - 1);
             const point = getPointOnLaneCurve(laneCurve, progress);
@@ -453,18 +536,18 @@ export function RoadView(props: RoadViewProps) {
             const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
             const TileIcon = styleInfo.icon;
             const tileRotate = showDetailedCard ? 0 : Math.max(-26, Math.min(26, point.angle));
-            const width = showDetailedCard ? 168 : isCheckpoint ? 34 : 24;
-            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : isCheckpoint ? 15 : 10;
-            return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? `rounded-2xl px-3 py-2 text-center ${styleInfo.bg} ${styleInfo.border}` : 'rounded-lg'} flex items-center justify-center backdrop-blur-md`} style={{
+            const width = showDetailedCard ? 176 : isCheckpoint ? 42 : 30;
+            const height = showDetailedCard ? ZOOMED_CARD_HEIGHT_PX : isCheckpoint ? 18 : 12;
+            return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? 'rounded-2xl px-3 py-2 text-center' : 'rounded-md'} flex items-center justify-center backdrop-blur-md overflow-hidden`} style={{
               left: `${point.x}%`,
               top: `${point.y}%`,
               width,
               height,
               transform: `translate(-50%, -50%) rotate(${tileRotate}deg)`,
               transformOrigin: 'center center',
-              borderColor: isCurrent ? neon : undefined,
-              background: showDetailedCard ? undefined : 'rgba(18,18,34,0.9)',
-              boxShadow: isCurrent ? `0 0 30px ${neon}88, inset 0 1px 0 rgba(255,255,255,0.35)` : isCheckpoint ? `0 0 12px ${laneColor}88` : `0 0 6px ${laneColor}55`,
+              borderColor: isCurrent ? neon : `${laneColor}${showDetailedCard ? '88' : '66'}`,
+              background: showDetailedCard ? `linear-gradient(135deg, rgba(5,8,18,0.95), rgba(22,18,38,0.94) 55%, ${laneColor}24)` : isCheckpoint ? `linear-gradient(90deg, rgba(3,6,14,0.96), ${laneColor}44, rgba(3,6,14,0.96))` : `linear-gradient(90deg, rgba(2,5,12,0.96), ${laneColor}2f, rgba(2,5,12,0.96))`,
+              boxShadow: isCurrent ? `0 0 34px ${neon}aa, inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -10px 18px rgba(0,0,0,0.35)` : isCheckpoint ? `0 0 16px ${laneColor}99, inset 0 1px 0 rgba(255,255,255,0.18)` : `0 0 8px ${laneColor}66, inset 0 1px 0 rgba(255,255,255,0.12)`,
               zIndex: showDetailedCard ? 28 : 18,
               opacity: showDetailedCard ? isCurrent ? 1 : 0.82 : laneIsActive ? 1 : 0.72
             }} animate={isCurrent ? {
@@ -472,17 +555,27 @@ export function RoadView(props: RoadViewProps) {
             } : undefined} transition={{
               duration: 0.3
             }}>
-                    {showDetailedCard ? <div className="flex w-full items-center justify-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/85 shadow-inner">
-                          <TileIcon className="h-4 w-4 text-slate-700" />
+                    {showDetailedCard ? <div className="relative flex w-full items-center justify-center gap-2.5">
+                        <div className="absolute inset-0 rounded-2xl border border-white/10 pointer-events-none" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10 shadow-inner" style={{
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.16), 0 0 12px ${laneColor}55`
+                  }}>
+                          <TileIcon className="h-4 w-4 text-white/85" />
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
-                            Space {idx + 1}
+                          <p className="text-[8px] font-black uppercase tracking-[0.18em]" style={{
+                      color: laneColor
+                    }}>
+                            Space {idx + 1} / embedded street card
                           </p>
-                          <p className="max-w-[118px] truncate text-xs font-black text-slate-900">{tile.name}</p>
+                          <p className="max-w-[124px] truncate text-xs font-black text-white">{tile.name}</p>
                         </div>
-                      </div> : <div className="h-2.5 w-2.5 rounded-full bg-white/70" />}
+                      </div> : <Fragment>
+                        <div className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-white/25" />
+                        {isCheckpoint ? <span className="relative text-[7px] font-black text-white/85">{idx + 1}</span> : <div className="relative h-1.5 w-1.5 rounded-full bg-white/75" style={{
+                    boxShadow: `0 0 8px ${laneColor}`
+                  }} />}
+                      </Fragment>}
                   </motion.div>;
           })}
 
