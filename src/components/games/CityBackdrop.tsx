@@ -67,14 +67,29 @@ export function CityBackdrop({
     }} />
       
 
-      {/* Animated neon billboards */}
+      {/* Subtle city depth silhouettes */}
       {Array.from({
-      length: 9
+      length: 8
+    }).map((_, index) => {
+      const width = 8 + index % 3 * 4;
+      const height = 26 + index % 4 * 10;
+      const left = 4 + index * 12;
+      return <div key={`tower-${index}`} className="absolute bottom-0 rounded-t-xl border-t border-white/10" style={{
+        left: `${left}%`,
+        width: `${width}%`,
+        height: `${height}%`,
+        background: 'linear-gradient(180deg, rgba(16,20,38,0.3), rgba(8,10,20,0.82))'
+      }} />;
+    })}
+
+      {/* Animated neon billboards (kept sparse for readability) */}
+      {Array.from({
+      length: 4
     }).map((_, index) => <motion.div key={`billboard-${index}`} className="absolute rounded-xl backdrop-blur-[1px]" style={{
-      top: `${14 + index % 4 * 16}%`,
-      left: `${6 + index * 10}%`,
-      width: `${44 + index % 3 * 10}px`,
-      height: `${18 + index % 2 * 6}px`,
+      top: `${18 + index * 14}%`,
+      left: `${index % 2 === 0 ? 7 : 76}%`,
+      width: `${58 + index % 2 * 14}px`,
+      height: `${22 + index % 2 * 6}px`,
       background: `${accent}${index % 2 === 0 ? '66' : '44'}`,
       boxShadow: `0 0 22px ${accent}`
     }} animate={{
@@ -89,7 +104,7 @@ export function CityBackdrop({
 
       {/* Traffic streaks along the bottom */}
       {Array.from({
-      length: 6
+      length: 4
     }).map((_, index) => <motion.div key={`traffic-${index}`} className="absolute h-[2px] rounded-full" style={{
       bottom: `${10 + index % 3 * 5}%`,
       left: '-30%',
