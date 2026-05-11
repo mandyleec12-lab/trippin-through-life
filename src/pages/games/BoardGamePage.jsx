@@ -2489,7 +2489,7 @@ export function BoardGamePage() {
     const player = players[playerIndex];
     if (!player.job) return false;
     const job = player.job;
-    const skipAndNext = (msg: string) => {
+    const skipAndNext = (msg) => {
       setJobEffectMessage(msg);
       setPlayers((prev) => prev.map((p, i) => i === playerIndex ? {
         ...p,
@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces: number) => {
+  const movePlayer = (spaces) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
