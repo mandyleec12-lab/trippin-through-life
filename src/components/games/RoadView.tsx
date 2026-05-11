@@ -401,122 +401,66 @@ function useStepAnimation(targetPos: number, resetKey: string): {
 // ─────────────────────────────────────────────────────────────────────────────
 const LANE_LABELS = ['College', 'High School / GED', 'Dropout'];
 const LANE_DISTRICTS = ['Campus Corridor', 'GED Midtown', 'Hustle Row'];
-function CinematicCityBackdrop({ accent }: {accent: string;}) {
-  const backgroundTowers = Array.from({ length: 14 });
-  const leftWindows = Array.from({ length: 48 });
-  const rightWindows = Array.from({ length: 44 });
-  const rainReflections = Array.from({ length: 18 });
+const REFERENCE_DISTRICT_SCENES = [
+  {
+    image: '/city-game-roads/neon-downtown.png',
+    label: 'Neon Downtown',
+    colorWash: 'rgba(168,85,247,0.28)'
+  },
+  {
+    image: '/city-game-roads/rainy-street.png',
+    label: 'Rainlit Avenue',
+    colorWash: 'rgba(56,189,248,0.22)'
+  },
+  {
+    image: '/city-game-roads/night-alley.png',
+    label: 'After Hours Row',
+    colorWash: 'rgba(236,72,153,0.22)'
+  },
+  {
+    image: '/city-game-roads/neon-boardwalk.png',
+    label: 'Dream Strip',
+    colorWash: 'rgba(249,115,22,0.22)'
+  },
+  {
+    image: '/city-game-roads/chaos-gas-station.png',
+    label: 'Stormline Station',
+    colorWash: 'rgba(239,68,68,0.2)'
+  }
+];
+function CinematicCityBackdrop({
+  accent,
+  districtIndex,
+  progress
+}: {accent: string;districtIndex: number;progress: number;}) {
+  const sceneIndex = (districtIndex + Math.floor(progress * 3)) % REFERENCE_DISTRICT_SCENES.length;
+  const scene = REFERENCE_DISTRICT_SCENES[sceneIndex];
   return <div className="absolute inset-0 overflow-hidden bg-slate-950 pointer-events-none" style={{
     zIndex: 0
   }}>
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="cinematic-sky" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#07112a" />
-            <stop offset="46%" stopColor="#130c2b" />
-            <stop offset="100%" stopColor="#050711" />
-          </linearGradient>
-          <linearGradient id="wet-road" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#101725" />
-            <stop offset="42%" stopColor="#060912" />
-            <stop offset="100%" stopColor="#02040b" />
-          </linearGradient>
-          <linearGradient id="left-sidewalk" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#111827" />
-            <stop offset="100%" stopColor="#050711" />
-          </linearGradient>
-          <linearGradient id="right-sidewalk" x1="1" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#111827" />
-            <stop offset="100%" stopColor="#050711" />
-          </linearGradient>
-          <filter id="soft-neon" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="distant-blur" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.2" />
-          </filter>
-          <radialGradient id="street-haze" cx="50%" cy="36%" r="58%">
-            <stop offset="0%" stopColor={`${accent}66`} />
-            <stop offset="42%" stopColor="rgba(56,189,248,0.16)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-          </radialGradient>
-        </defs>
+      <motion.div key={scene.image} className="absolute inset-0 bg-cover bg-center" style={{
+      backgroundImage: `url("${scene.image}")`,
+      filter: 'saturate(1.12) contrast(1.06) brightness(0.92)',
+      transform: 'scale(1.045)'
+    }} initial={{
+      opacity: 0.7
+    }} animate={{
+      opacity: 1
+    }} transition={{
+      duration: 0.7,
+      ease: 'easeOut'
+    }} />
 
-        <rect width="1000" height="700" fill="url(#cinematic-sky)" />
-        <rect width="1000" height="700" fill="url(#street-haze)" opacity="0.58" />
+      <div className="absolute inset-0 mix-blend-screen" style={{
+      background: `radial-gradient(circle at 50% 45%, ${scene.colorWash}, transparent 42%), radial-gradient(circle at 50% 78%, ${accent}44, transparent 30%)`
+    }} />
 
-        <g filter="url(#distant-blur)" opacity="0.82">
-          {backgroundTowers.map((_, index) => {
-            const x = 82 + index * 64;
-            const height = 145 + index % 5 * 34;
-            const width = 38 + index % 3 * 14;
-            return <g key={`tower-${index}`}>
-                <rect x={x} y={240 - height} width={width} height={height + 150} rx="3" fill={index % 2 === 0 ? '#101827' : '#151324'} />
-                {Array.from({ length: 10 }).map((__, windowIndex) => <rect key={windowIndex} x={x + 7 + windowIndex % 3 * 11} y={260 - height + Math.floor(windowIndex / 3) * 18} width="4" height="7" rx="1" fill={windowIndex % 4 === 0 ? '#fef3c7' : '#38bdf855'} />)}
-              </g>;
-          })}
-        </g>
-
-        <polygon points="0,700 356,700 461,205 0,280" fill="url(#left-sidewalk)" />
-        <polygon points="1000,700 644,700 539,205 1000,280" fill="url(#right-sidewalk)" />
-        <polygon points="356,700 644,700 539,205 461,205" fill="url(#wet-road)" />
-        <polygon points="366,700 392,700 470,210 462,210" fill="#f59e0b" opacity="0.72" />
-        <polygon points="608,700 634,700 538,210 530,210" fill="#f59e0b" opacity="0.72" />
-        <path d="M 500 205 L 500 700" stroke="rgba(255,255,255,0.18)" strokeWidth="3" strokeDasharray="22 34" />
-
-        <g>
-          <polygon points="-55,700 250,700 410,192 36,122" fill="#120b18" />
-          <polygon points="250,700 330,680 438,212 410,192" fill="#080a12" />
-          <polygon points="-20,118 410,192 410,150 20,76" fill="#1a1024" />
-          <rect x="36" y="92" width="184" height="74" rx="8" fill="#16080b" stroke="#ef4444" strokeWidth="2" filter="url(#soft-neon)" />
-          <text x="128" y="140" textAnchor="middle" fill="#ff705d" fontSize="36" fontWeight="900" letterSpacing="5">LOANS</text>
-          {leftWindows.map((_, index) => <rect key={`left-window-${index}`} x={52 + index % 6 * 30} y={188 + Math.floor(index / 6) * 48} width="13" height="18" rx="2" fill={index % 4 === 0 ? '#fbbf24aa' : '#38bdf855'} filter={index % 4 === 0 ? 'url(#soft-neon)' : undefined} />)}
-          <polygon points="234,560 318,540 290,700 214,700" fill="#171923" opacity="0.92" />
-        </g>
-
-        <g>
-          <polygon points="1055,700 750,700 590,192 964,122" fill="#100d1d" />
-          <polygon points="750,700 670,680 562,212 590,192" fill="#070911" />
-          <polygon points="1020,118 590,192 590,150 980,76" fill="#171029" />
-          <rect x="746" y="82" width="204" height="86" rx="8" fill="#10081f" stroke="#a855f7" strokeWidth="2" filter="url(#soft-neon)" />
-          <text x="848" y="116" textAnchor="middle" fill="#e9d5ff" fontSize="21" fontWeight="900" letterSpacing="2">LIVE YOUR</text>
-          <text x="848" y="147" textAnchor="middle" fill="#fb3ca6" fontSize="31" fontWeight="900" fontStyle="italic">DREAMS</text>
-          <rect x="746" y="198" width="190" height="52" rx="5" fill="#061411" stroke="#34d399" strokeWidth="2" filter="url(#soft-neon)" />
-          <text x="841" y="229" textAnchor="middle" fill="#86efac" fontSize="18" fontWeight="900">OPPORTUNITY IS HERE</text>
-          {rightWindows.map((_, index) => <rect key={`right-window-${index}`} x={784 + index % 5 * 30} y={286 + Math.floor(index / 5) * 44} width="13" height="17" rx="2" fill={index % 5 === 0 ? '#f472b6aa' : '#93c5fd55'} filter={index % 5 === 0 ? 'url(#soft-neon)' : undefined} />)}
-        </g>
-
-        <g opacity="0.95">
-          {[230, 760].map((x, index) => <g key={`streetlight-${index}`}>
-              <path d={`M ${x} 620 L ${index === 0 ? 374 : 626} 260`} stroke="#334155" strokeWidth="8" strokeLinecap="round" />
-              <path d={`M ${index === 0 ? 374 : 626} 260 Q ${index === 0 ? 430 : 570} 230 ${index === 0 ? 456 : 544} 250`} stroke="#475569" strokeWidth="5" fill="none" />
-              <ellipse cx={index === 0 ? 456 : 544} cy="254" rx="30" ry="10" fill="#fde68a" filter="url(#soft-neon)" />
-              <polygon points={`${index === 0 ? 426 : 514},260 ${index === 0 ? 486 : 574},260 ${index === 0 ? 548 : 452},700 ${index === 0 ? 252 : 748},700`} fill="#fde68a" opacity="0.08" />
-            </g>)}
-        </g>
-
-        <g>
-          <rect x="94" y="435" width="102" height="42" rx="5" fill="#170b18" stroke="#f472b6" filter="url(#soft-neon)" />
-          <text x="145" y="460" textAnchor="middle" fill="#f9a8d4" fontSize="14" fontWeight="900">CHOICES</text>
-          <path d="M145 477 L145 608" stroke="#475569" strokeWidth="5" />
-          <rect x="833" y="395" width="96" height="42" rx="5" fill="#1a080d" stroke="#fb7185" filter="url(#soft-neon)" />
-          <text x="881" y="421" textAnchor="middle" fill="#fda4af" fontSize="13" fontWeight="900">NO RISK</text>
-          <path d="M881 437 L881 590" stroke="#475569" strokeWidth="5" />
-        </g>
-
-        <g opacity="0.56">
-          {rainReflections.map((_, index) => <ellipse key={`reflection-${index}`} cx={210 + index * 36} cy={560 + index % 4 * 28} rx={50 + index % 3 * 18} ry="5" fill={index % 2 === 0 ? '#a855f7' : '#38bdf8'} filter="url(#soft-neon)" />)}
-          <path d="M 404 690 C 430 604 453 420 481 224" stroke={accent} strokeWidth="16" opacity="0.18" filter="url(#soft-neon)" />
-          <path d="M 596 690 C 570 604 547 420 519 224" stroke="#f97316" strokeWidth="16" opacity="0.14" filter="url(#soft-neon)" />
-        </g>
-      </svg>
+      <div className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white/75 backdrop-blur-md">
+        {scene.label}
+      </div>
 
       <div className="absolute inset-0" style={{
-      background: 'linear-gradient(180deg, rgba(2,6,23,0.06) 0%, transparent 32%, rgba(2,6,23,0.42) 100%), radial-gradient(ellipse at 50% 64%, transparent 0%, transparent 46%, rgba(0,0,0,0.42) 100%)'
+      background: 'linear-gradient(180deg, rgba(2,6,23,0.08) 0%, transparent 28%, rgba(2,6,23,0.38) 100%), radial-gradient(ellipse at 50% 68%, transparent 0%, transparent 46%, rgba(0,0,0,0.42) 100%)'
     }} />
       <motion.div className="absolute inset-x-0 top-[18%] h-[30%] bg-cyan-200/10 blur-3xl" animate={{
       opacity: [0.16, 0.34, 0.18],
@@ -595,7 +539,7 @@ export function RoadView(props: RoadViewProps) {
     perspective: 980,
     perspectiveOrigin: '50% 78%'
   }}>
-      <CinematicCityBackdrop accent={neon} />
+      <CinematicCityBackdrop accent={neon} districtIndex={activePathIdx} progress={activeLaneProgress} />
       <motion.div className="absolute left-0 top-0" style={{
       width: worldWidth,
       height: worldHeight,
@@ -629,15 +573,15 @@ export function RoadView(props: RoadViewProps) {
               const segmentScale = getPerspectiveScale((start.y + end.y) / 2, worldHeight);
               const segmentPath = toSvgSegmentPath(start, end);
               return <g key={`road-segment-${laneIdx}-${segmentIdx}`}>
-                    <path d={segmentPath} fill="none" stroke="rgba(70,65,58,0.72)" strokeWidth={92 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(4,5,8,0.94)" strokeWidth={80 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(32,34,38,0.98)" strokeWidth={66 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke={`${laneColor}30`} strokeWidth={48 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke="rgba(255,255,255,0.36)" strokeWidth={3 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(0,0,0,0.34)" strokeWidth={96 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(20,24,32,0.46)" strokeWidth={76 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${laneColor}24`} strokeWidth={54 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={2.5 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${laneColor}66`} strokeWidth={8 * segmentScale} strokeLinecap="round" strokeLinejoin="round" opacity={0.48} />
                   </g>;
             })}
-                <path d={lanePath} fill="none" stroke={`${laneColor}99`} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12 34" />
-                <path d={lanePath} fill="none" stroke="rgba(250,204,21,0.5)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 48" />
+                <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12 34" opacity={0.72} />
+                <path d={lanePath} fill="none" stroke="rgba(250,204,21,0.38)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 48" />
                 {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
               const point = getPointOnLaneCurve(overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0], progress);
               return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={6} fill={laneColor} opacity={0.5} />;
