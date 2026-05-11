@@ -63,7 +63,6 @@ const BOARD_WORLD_HEIGHT_MULTIPLIER = 4.6;
 const CAMERA_Y_ANCHOR = 0.76;
 const CAMERA_TILT_DEG = 54;
 const CAMERA_ROLL_DEG = -1.25;
-const NEARBY_OTHER_LANE_CARD_WINDOW = 0.34;
 type LanePoint = {
   x: number;
   y: number;
@@ -405,27 +404,32 @@ const REFERENCE_DISTRICT_SCENES = [
   {
     image: '/city-game-roads/neon-downtown.png',
     label: 'Neon Downtown',
-    colorWash: 'rgba(168,85,247,0.28)'
+    colorWash: 'rgba(168,85,247,0.28)',
+    position: 'center 58%'
   },
   {
     image: '/city-game-roads/rainy-street.png',
     label: 'Rainlit Avenue',
-    colorWash: 'rgba(56,189,248,0.22)'
+    colorWash: 'rgba(56,189,248,0.22)',
+    position: 'center 58%'
   },
   {
     image: '/city-game-roads/night-alley.png',
     label: 'After Hours Row',
-    colorWash: 'rgba(236,72,153,0.22)'
+    colorWash: 'rgba(236,72,153,0.22)',
+    position: 'center 56%'
   },
   {
     image: '/city-game-roads/neon-boardwalk.png',
     label: 'Dream Strip',
-    colorWash: 'rgba(249,115,22,0.22)'
+    colorWash: 'rgba(249,115,22,0.22)',
+    position: 'center 58%'
   },
   {
     image: '/city-game-roads/chaos-gas-station.png',
     label: 'Stormline Station',
-    colorWash: 'rgba(239,68,68,0.2)'
+    colorWash: 'rgba(239,68,68,0.2)',
+    position: 'center 57%'
   }
 ];
 function CinematicCityBackdrop({
@@ -438,17 +442,11 @@ function CinematicCityBackdrop({
   return <div className="absolute inset-0 overflow-hidden bg-slate-950 pointer-events-none" style={{
     zIndex: 0
   }}>
-      <motion.div key={scene.image} className="absolute inset-0 bg-cover bg-center" style={{
+      <div key={scene.image} className="absolute inset-0 bg-cover" style={{
       backgroundImage: `url("${scene.image}")`,
+      backgroundPosition: scene.position,
       filter: 'saturate(1.12) contrast(1.06) brightness(0.92)',
-      transform: 'scale(1.045)'
-    }} initial={{
-      opacity: 0.7
-    }} animate={{
-      opacity: 1
-    }} transition={{
-      duration: 0.7,
-      ease: 'easeOut'
+      transform: 'scale(1.025)'
     }} />
 
       <div className="absolute inset-0 mix-blend-screen" style={{
@@ -467,6 +465,89 @@ function CinematicCityBackdrop({
       x: ['-4%', '4%', '-4%']
     }} transition={{
       duration: 7,
+      repeat: Infinity,
+      ease: 'easeInOut'
+    }} />
+    </div>;
+}
+function CityLifeOverlay({ accent }: {accent: string;}) {
+  return <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{
+    zIndex: 1
+  }}>
+      {[0, 1, 2].map((person) => <motion.div key={`pedestrian-${person}`} className="absolute h-7 w-3 rounded-full bg-slate-100/70 shadow-[0_0_12px_rgba(255,255,255,0.45)]" style={{
+      top: `${52 + person * 10}%`,
+      left: person % 2 === 0 ? '12%' : '84%'
+    }} animate={{
+      y: [0, person % 2 === 0 ? 54 : -46],
+      opacity: [0, 0.85, 0.85, 0]
+    }} transition={{
+      duration: 9 + person * 1.8,
+      repeat: Infinity,
+      delay: person * 1.6,
+      ease: 'linear'
+    }}>
+          <span className="absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-slate-200/80" />
+        </motion.div>)}
+
+      {[0, 1].map((car) => <motion.div key={`side-car-${car}`} className="absolute h-7 w-16 rounded-xl border border-white/15 bg-black/65 shadow-[0_12px_24px_rgba(0,0,0,0.5)]" style={{
+      top: `${68 + car * 9}%`,
+      left: car === 0 ? '-12%' : '104%'
+    }} animate={{
+      x: car === 0 ? ['0vw', '42vw'] : ['0vw', '-38vw'],
+      opacity: [0, 0.8, 0.8, 0]
+    }} transition={{
+      duration: 11 + car * 2,
+      repeat: Infinity,
+      delay: car * 3.5,
+      ease: 'linear'
+    }}>
+          <span className="absolute left-2 top-1 h-1.5 w-5 rounded-full bg-cyan-200/80" />
+          <span className="absolute right-1 bottom-1 h-1.5 w-3 rounded-full bg-red-400/90" />
+        </motion.div>)}
+
+      {[0, 1, 2, 3].map((glint) => <motion.span key={`road-glint-${glint}`} className="absolute h-px rounded-full" style={{
+      left: `${33 + glint * 10}%`,
+      top: `${58 + glint * 8}%`,
+      width: `${72 + glint * 24}px`,
+      background: glint % 2 === 0 ? accent : '#38bdf8',
+      boxShadow: `0 0 18px ${glint % 2 === 0 ? accent : '#38bdf8'}`
+    }} animate={{
+      opacity: [0.05, 0.5, 0.08],
+      scaleX: [0.7, 1.18, 0.82]
+    }} transition={{
+      duration: 2.4 + glint * 0.35,
+      repeat: Infinity,
+      delay: glint * 0.45,
+      ease: 'easeInOut'
+    }} />)}
+
+      {[0, 1].map((steam) => <motion.span key={`steam-${steam}`} className="absolute h-20 w-16 rounded-full bg-white/10 blur-xl" style={{
+      left: steam === 0 ? '24%' : '72%',
+      bottom: `${10 + steam * 8}%`
+    }} animate={{
+      y: [26, -38],
+      opacity: [0, 0.32, 0],
+      scale: [0.8, 1.35]
+    }} transition={{
+      duration: 5.8 + steam,
+      repeat: Infinity,
+      delay: steam * 2.1,
+      ease: 'easeOut'
+    }} />)}
+
+      <motion.div className="absolute right-[8%] top-[18%] rounded-lg border border-fuchsia-300/40 bg-black/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200 shadow-[0_0_24px_rgba(217,70,239,0.55)]" animate={{
+      opacity: [0.55, 1, 0.42, 0.9]
+    }} transition={{
+      duration: 2.1,
+      repeat: Infinity,
+      ease: 'easeInOut'
+    }}>
+        Open late
+      </motion.div>
+      <motion.div className="absolute left-[11%] top-[22%] h-4 w-4 rounded-full bg-emerald-300 shadow-[0_0_22px_rgba(110,231,183,0.9)]" animate={{
+      opacity: [0.35, 1, 0.35]
+    }} transition={{
+      duration: 1.3,
       repeat: Infinity,
       ease: 'easeInOut'
     }} />
@@ -524,8 +605,8 @@ export function RoadView(props: RoadViewProps) {
     const worldLaneCurves = getWorldLaneCurves(worldWidth, worldHeight);
     return paths.map((_, laneIdx) => worldLaneCurves[laneIdx] ?? worldLaneCurves[0]);
   }, [paths, worldHeight, worldWidth]);
-  const overviewSvgPaths = useMemo(() => overviewLaneCurves.map((curve) => toSvgLanePath(curve)), [overviewLaneCurves]);
   const activeLaneCurve = overviewLaneCurves[activePathIdx] ?? overviewLaneCurves[0];
+  const activeLaneSvgPath = useMemo(() => toSvgLanePath(activeLaneCurve), [activeLaneCurve]);
   const activeLaneProgress = clampedZoomedPos / Math.max(1, totalTilesZoomed - 1);
   const activeLanePoint = getPointOnLaneCurve(activeLaneCurve, activeLaneProgress);
   const cameraScale = 1.24;
@@ -540,6 +621,7 @@ export function RoadView(props: RoadViewProps) {
     perspectiveOrigin: '50% 78%'
   }}>
       <CinematicCityBackdrop accent={neon} districtIndex={activePathIdx} progress={activeLaneProgress} />
+      <CityLifeOverlay accent={neon} />
       <motion.div className="absolute left-0 top-0" style={{
       width: worldWidth,
       height: worldHeight,
@@ -565,29 +647,26 @@ export function RoadView(props: RoadViewProps) {
               </feMerge>
             </filter>
           </defs>
-          {overviewSvgPaths.map((lanePath, laneIdx) => {
-          const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
-          return <g key={`lane-road-${laneIdx}`}>
-                {overviewLaneCurves[laneIdx]?.slice(0, -1).map((start, segmentIdx) => {
-              const end = overviewLaneCurves[laneIdx][segmentIdx + 1];
+          <g>
+            {activeLaneCurve.slice(0, -1).map((start, segmentIdx) => {
+              const end = activeLaneCurve[segmentIdx + 1];
               const segmentScale = getPerspectiveScale((start.y + end.y) / 2, worldHeight);
               const segmentPath = toSvgSegmentPath(start, end);
-              return <g key={`road-segment-${laneIdx}-${segmentIdx}`}>
+              return <g key={`road-segment-${activePathIdx}-${segmentIdx}`}>
                     <path d={segmentPath} fill="none" stroke="rgba(0,0,0,0.34)" strokeWidth={96 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
                     <path d={segmentPath} fill="none" stroke="rgba(20,24,32,0.46)" strokeWidth={76 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke={`${laneColor}24`} strokeWidth={54 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={segmentPath} fill="none" stroke={`${neon}24`} strokeWidth={54 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
                     <path d={segmentPath} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={2.5 * segmentScale} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d={segmentPath} fill="none" stroke={`${laneColor}66`} strokeWidth={8 * segmentScale} strokeLinecap="round" strokeLinejoin="round" opacity={0.48} />
+                    <path d={segmentPath} fill="none" stroke={`${neon}66`} strokeWidth={8 * segmentScale} strokeLinecap="round" strokeLinejoin="round" opacity={0.48} />
                   </g>;
             })}
-                <path d={lanePath} fill="none" stroke={`${laneColor}aa`} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12 34" opacity={0.72} />
-                <path d={lanePath} fill="none" stroke="rgba(250,204,21,0.38)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 48" />
-                {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
-              const point = getPointOnLaneCurve(overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0], progress);
-              return <circle key={`lane-marker-${laneIdx}-${progress}`} cx={point.x} cy={point.y} r={6} fill={laneColor} opacity={0.5} />;
+            <path d={activeLaneSvgPath} fill="none" stroke={`${neon}aa`} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="12 34" opacity={0.72} />
+            <path d={activeLaneSvgPath} fill="none" stroke="rgba(250,204,21,0.38)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 48" />
+            {[0.18, 0.36, 0.54, 0.72, 0.9].map((progress) => {
+              const point = getPointOnLaneCurve(activeLaneCurve, progress);
+              return <circle key={`lane-marker-${activePathIdx}-${progress}`} cx={point.x} cy={point.y} r={6} fill={neon} opacity={0.5} />;
             })}
-              </g>;
-        })}
+          </g>
         </svg>
         {/* Bridge seams and support shadows make crossovers read like elevated highways. */}
         <div className="absolute left-[48%] top-[53%] h-8 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-y border-white/18 bg-slate-900/80" style={{
@@ -597,13 +676,12 @@ export function RoadView(props: RoadViewProps) {
         boxShadow: '0 18px 24px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.14)'
       }} />
 
-        {paths.map((_, laneIdx) => {
-        const laneCurve = overviewLaneCurves[laneIdx] ?? overviewLaneCurves[0];
+        {[activePathIdx].map((laneIdx) => {
+        const laneCurve = activeLaneCurve;
         const tilesOnLane = activePathTiles[laneIdx] ?? [];
         const totalTilesLane = tilesOnLane.length || 30;
-        const playersOnLane = players.filter((p) => p.pathIndex === laneIdx);
-        const laneColor = PATH_NEON_HEX[laneIdx] ?? '#a855f7';
-        const laneIsActive = laneIdx === activePathIdx;
+        const playersOnLane: Player[] = [];
+        const laneColor = neon;
         const startPoint = getPointOnLaneCurve(laneCurve, 0);
         const finishPoint = getPointOnLaneCurve(laneCurve, 1);
         return <Fragment key={laneIdx}>
@@ -631,7 +709,7 @@ export function RoadView(props: RoadViewProps) {
               zIndex: 5
             }} />;
           })}
-              {(!isZoomed || laneIsActive) && <Fragment>
+              <Fragment>
                   <div className="absolute -translate-x-1/2 rounded-sm border border-white/15 bg-slate-950/75 px-2.5 py-1 text-center text-[7px] font-black uppercase tracking-[0.18em] text-white/85" style={{
               left: startPoint.x,
               top: Math.min(worldHeight - 54, startPoint.y + 72),
@@ -649,16 +727,15 @@ export function RoadView(props: RoadViewProps) {
             }}>
                     {LANE_DISTRICTS[laneIdx]}
                   </div>
-                </Fragment>}
+                </Fragment>
               {tilesOnLane.map((tileId, idx) => {
             const progress = idx / Math.max(1, totalTilesLane - 1);
             const point = getPointOnLaneCurve(laneCurve, progress);
-            const distanceFromCurrent = laneIsActive ? idx - clampedZoomedPos : 999;
+            const distanceFromCurrent = idx - clampedZoomedPos;
             const isCheckpoint = idx % 5 === 0 || idx === totalTilesLane - 1;
-            const isNearbyOtherLaneCheckpoint = !laneIsActive && isCheckpoint && Math.abs(point.y - activeLanePoint.y) < viewportSize.height * NEARBY_OTHER_LANE_CARD_WINDOW;
-            const showInZoom = laneIsActive ? distanceFromCurrent >= 0 && distanceFromCurrent <= ACTIVE_CARD_AHEAD_RANGE : isNearbyOtherLaneCheckpoint;
+            const showInZoom = distanceFromCurrent >= 0 && distanceFromCurrent <= ACTIVE_CARD_AHEAD_RANGE;
             if (!showInZoom) return null;
-            const showDetailedCard = laneIsActive && distanceFromCurrent <= ACTIVE_DETAILED_AHEAD_RANGE;
+            const showDetailedCard = distanceFromCurrent <= ACTIVE_DETAILED_AHEAD_RANGE;
             const isCurrent = showDetailedCard && distanceFromCurrent === 0;
             const tile = getTileById(tileId);
             const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
@@ -669,7 +746,7 @@ export function RoadView(props: RoadViewProps) {
             const overviewHeight = Math.round((isCheckpoint ? 38 : 24) * perspectiveScale);
             const normalizedY = point.y / worldHeight;
             const showOverviewText = !showDetailedCard && (isCheckpoint || normalizedY > 0.72);
-            const activeCardScale = laneIsActive ? clamp(1.1 - Math.max(0, distanceFromCurrent) * 0.1, 0.72, 1.12) : 1;
+            const activeCardScale = clamp(1.12 - Math.max(0, distanceFromCurrent) * 0.11, 0.72, 1.14);
             const width = showDetailedCard ? Math.round(208 * activeCardScale) : overviewWidth;
             const height = showDetailedCard ? Math.round(92 * activeCardScale) : overviewHeight;
             return <motion.div key={`${laneIdx}-${tileId}-${idx}`} className={`absolute border ${showDetailedCard ? 'rounded-xl px-3 py-2 text-center' : 'rounded-sm'} flex items-center justify-center overflow-hidden`} style={{
@@ -683,7 +760,7 @@ export function RoadView(props: RoadViewProps) {
               background: showDetailedCard ? `linear-gradient(135deg, rgba(42,43,46,0.98), rgba(25,27,31,0.98) 58%, ${laneColor}2b)` : isCheckpoint ? `linear-gradient(180deg, rgba(58,57,55,0.96), rgba(30,32,35,0.98))` : `linear-gradient(180deg, rgba(49,50,52,0.96), rgba(28,30,33,0.98))`,
               boxShadow: isCurrent ? `0 0 22px ${neon}88, inset 0 2px 0 rgba(255,255,255,0.24), inset 0 -10px 18px rgba(0,0,0,0.42)` : isCheckpoint ? `0 6px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18)` : `0 4px 8px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12)`,
               zIndex: showDetailedCard ? 28 : 18,
-              opacity: showDetailedCard ? isCurrent ? 1 : 0.82 : laneIsActive ? 1 : 0.72
+              opacity: showDetailedCard ? isCurrent ? 1 : 0.84 : 0.78
             }} animate={isCurrent ? {
               scale: [1, 1.03, 1]
             } : undefined} transition={{
