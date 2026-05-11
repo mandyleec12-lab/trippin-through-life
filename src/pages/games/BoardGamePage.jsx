@@ -5,7 +5,7 @@ import { HeartCrackIcon, DollarSignIcon, SparklesIcon, FlameIcon, StarIcon, Wand
 import { JourneyStartScene } from '../../components/games/JourneyStartScene';
 import { CityBackdrop } from '../../components/games/CityBackdrop';
 import { RoadView } from '../../components/games/RoadView';
-// --- TYPES removed (JSX file) ---
+
 const PAWN_STEP_DURATION_MS = 440;
 const PAWN_LANDING_BUFFER_MS = 700;
 const STARTING_HAND_RESHUFFLE_LIMIT = 2;
@@ -1728,7 +1728,7 @@ const CHAOS_REALM_TILE_POOL = [
   effect: 'exit',
   effectValue: 0
 }];
-const CHAOS_REALM_SCENES = [{
+const CHAOS_REALM_SCENES: ChaosScene[] = [{
   title: 'Car dead in the storm',
   subtitle: 'The engine clicks once, then gives up. Rain hammers the windshield.',
   location: 'Flooded service road',
@@ -2292,7 +2292,7 @@ export function BoardGamePage() {
   const [chaosSceneIndex, setChaosSceneIndex] = useState(0);
   const [selectedChaosChoice, setSelectedChaosChoice] = useState(null);
   const [chaosOutcome, setChaosOutcome] = useState(null);
-  const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
+  const [eliminatedPlayers, setEliminatedPlayers] = useState<string[]>([]);
   const [showChaosTransition, setShowChaosTransition] = useState(false);
   // Transportation event state
   const [transportEvent, setTransportEvent] = useState(null);
@@ -2489,7 +2489,7 @@ export function BoardGamePage() {
     const player = players[playerIndex];
     if (!player.job) return false;
     const job = player.job;
-    const skipAndNext = (msg) => {
+    const skipAndNext = (msg: string) => {
       setJobEffectMessage(msg);
       setPlayers((prev) => prev.map((p, i) => i === playerIndex ? {
         ...p,
@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces) => {
+  const movePlayer = (spaces: number) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
@@ -2848,7 +2848,7 @@ export function BoardGamePage() {
   const currentChaosScene = chaosRealmScenes[chaosSceneIndex] ?? CHAOS_REALM_SCENES[0];
   const chaosSceneCount = Math.max(1, chaosRealmScenes.length);
   // ===================== RENDER =====================
-  return <div className="h-[100dvh] bg-gradient-to-br from-pink-100 via-lavender-100 to-blue-100 overflow-hidden font-sans select-none relative">
+  return <div className="min-h-screen bg-gradient-to-br from-pink-100 via-lavender-100 to-blue-100 overflow-hidden font-sans select-none">
       <FloatingParticles count={40} />
 
       {/* ========== SETUP ========== */}
@@ -2865,7 +2865,7 @@ export function BoardGamePage() {
         type: 'spring',
         stiffness: 80,
         damping: 20
-      }} className="bg-white/70 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_20px_80px_rgba(168,85,247,0.15)] border border-white/80 max-w-2xl w-full text-center relative overflow-y-auto max-h-[90dvh]">
+      }} className="bg-white/70 backdrop-blur-2xl p-8 md:p-12 rounded-[2rem] shadow-[0_20px_80px_rgba(168,85,247,0.15)] border border-white/80 max-w-2xl w-full text-center relative overflow-hidden">
           
             {/* Decorative glows */}
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-pink-300/30 rounded-full blur-3xl" />
@@ -2952,7 +2952,7 @@ export function BoardGamePage() {
                   </label>
                   <input type="text" value={player.name} onChange={(e) => updatePlayer(player.id, 'name', e.target.value)} className="flex-1 bg-transparent font-bold text-purple-800 text-lg outline-none min-w-0" placeholder={`Player ${index + 1}`} />
               
-                  <select value={player.color} onChange={(e) => updatePlayer(player.id, 'color', e.target.value as PlayerColor)} className="bg-white/80 border border-purple-200/50 rounded-xl px-2 py-1.5 text-purple-700 font-bold outline-none text-sm backdrop-blur-sm">
+                  <select value={player.color} onChange={(e) => updatePlayer(player.id, 'color', e.target.value)} className="bg-white/80 border border-purple-200/50 rounded-xl px-2 py-1.5 text-purple-700 font-bold outline-none text-sm backdrop-blur-sm">
                 
                     {(['pink', 'purple', 'blue', 'teal', 'gold', 'coral']).map((c) => <option key={c} value={c}>
                         {c.charAt(0).toUpperCase() + c.slice(1)}
@@ -3220,13 +3220,13 @@ export function BoardGamePage() {
               Trippin' Through Life
             </h1>
             <div className="flex items-center gap-2">
-              {players[currentPlayerIndex].avatar && <img src={players[currentPlayerIndex].avatar!} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-white shadow" />}
+              {players[currentPlayerIndex].avatar && <img src={players[currentPlayerIndex].avatar} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-white shadow" />}
               <div className={`px-3 py-1 rounded-full text-white font-bold text-xs shadow-lg ${PLAYER_COLORS[players[currentPlayerIndex].color]}`}>
               
                 {players[currentPlayerIndex].name}
               </div>
               {players[currentPlayerIndex].job && <span className="text-sm">
-                  {players[currentPlayerIndex].job?.emoji}
+                  {players[currentPlayerIndex].job!.emoji}
                 </span>}
               {players[currentPlayerIndex].pathIndex === 0 && players[currentPlayerIndex].studentLoanDebt > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                     💳 Loans
