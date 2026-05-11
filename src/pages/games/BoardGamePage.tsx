@@ -60,6 +60,13 @@ interface ChaosChoice {
   description: string;
   icon: string;
   tone: 'risk' | 'caution' | 'hope';
+  objectName: string;
+  hotspot: {
+    left: string;
+    top: string;
+    width: string;
+    height: string;
+  };
   outcomeTitle: string;
   outcomeText: string;
   moneyDelta: number;
@@ -1813,6 +1820,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Pop the hood and try to get it moving.',
     icon: '🔧',
     tone: 'caution',
+    objectName: 'abandoned car',
+    hotspot: { left: '9%', top: '55%', width: '21%', height: '21%' },
     outcomeTitle: 'You bought yourself time',
     outcomeText: 'The fix barely holds, but you avoid a bigger tow bill.',
     moneyDelta: -75
@@ -1821,6 +1830,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Look for help, supplies, or a working phone.',
     icon: '⛽',
     tone: 'hope',
+    objectName: 'gas station door',
+    hotspot: { left: '42%', top: '28%', width: '18%', height: '24%' },
     outcomeTitle: 'A clerk helped you call a ride',
     outcomeText: 'It costs money, but you get out of the storm safely.',
     moneyDelta: -120,
@@ -1830,6 +1841,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'A shortcut might get you out faster.',
     icon: '🌆',
     tone: 'risk',
+    objectName: 'alley entrance',
+    hotspot: { left: '77%', top: '45%', width: '15%', height: '27%' },
     outcomeTitle: 'The shortcut got expensive',
     outcomeText: 'You found the way out, but lost cash replacing what got ruined.',
     moneyDelta: -220
@@ -1845,6 +1858,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Look for a charger, map, or emergency number.',
     icon: '🔦',
     tone: 'caution',
+    objectName: 'broken vending machine',
+    hotspot: { left: '58%', top: '38%', width: '14%', height: '24%' },
     outcomeTitle: 'You found a working charger',
     outcomeText: 'A little battery, a little clarity, and one way forward.',
     moneyDelta: 50
@@ -1853,6 +1868,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'They know the area, but you do not know them.',
     icon: '🧥',
     tone: 'risk',
+    objectName: 'figure by the pumps',
+    hotspot: { left: '31%', top: '38%', width: '12%', height: '25%' },
     outcomeTitle: 'Bad advice sent you in circles',
     outcomeText: 'You make it out, shaken and short on cash.',
     moneyDelta: -180,
@@ -1862,6 +1879,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Wait out the worst of the rain.',
     icon: '🌧️',
     tone: 'hope',
+    objectName: 'gas station awning',
+    hotspot: { left: '38%', top: '20%', width: '32%', height: '14%' },
     outcomeTitle: 'The storm eased',
     outcomeText: 'You lost time, but avoided making a desperate choice.',
     moneyDelta: 0,
@@ -1878,6 +1897,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Swallow your pride and ask for help.',
     icon: '📱',
     tone: 'hope',
+    objectName: 'broken phone booth',
+    hotspot: { left: '68%', top: '43%', width: '12%', height: '27%' },
     outcomeTitle: 'Someone answered',
     outcomeText: 'Support arrived when you needed it most.',
     moneyDelta: 125,
@@ -1887,6 +1908,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Pay for one night and regroup.',
     icon: '🏚️',
     tone: 'caution',
+    objectName: 'motel door',
+    hotspot: { left: '43%', top: '32%', width: '16%', height: '28%' },
     outcomeTitle: 'A rough reset',
     outcomeText: 'Not comfortable, not cheap, but safer than the street.',
     moneyDelta: -160,
@@ -1896,6 +1919,8 @@ const CHAOS_REALM_SCENES: ChaosScene[] = [{
     description: 'Push through and hope the city lets you pass.',
     icon: '🚶',
     tone: 'risk',
+    objectName: 'subway gate',
+    hotspot: { left: '18%', top: '42%', width: '15%', height: '28%' },
     outcomeTitle: 'You made it through exhausted',
     outcomeText: 'You escape, but the stress follows you into the next turn.',
     moneyDelta: -90,
@@ -3821,7 +3846,7 @@ export function BoardGamePage() {
                   Chaos Realm
                 </h2>
                 <p className="mt-2 text-xs font-bold uppercase tracking-[0.24em] text-purple-200/70">
-                  Choose wisely
+                  Look closely
                 </p>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-white/70">
                   {currentChaosScene.leftNote}
@@ -3863,6 +3888,34 @@ export function BoardGamePage() {
             clipPath: 'polygon(0 100%, 27% 0, 73% 0, 100% 100%)'
           }} />
 
+              {!chaosOutcome && currentChaosScene.choices.map((choice, choiceIndex) => <motion.button key={choice.label} type="button" aria-label={`Inspect ${choice.objectName}`} title={`Inspect ${choice.objectName}`} onClick={() => handleChaosChoice(choice)} className="group absolute cursor-pointer rounded-full border border-white/10 bg-transparent outline-none" style={{
+            left: choice.hotspot.left,
+            top: choice.hotspot.top,
+            width: choice.hotspot.width,
+            height: choice.hotspot.height,
+            boxShadow: `0 0 14px ${currentChaosScene.sceneAccent}33, inset 0 0 22px rgba(255,255,255,0.04)`
+          }} initial={{
+            opacity: 0
+          }} animate={{
+            opacity: [0.22, 0.5, 0.26],
+            scale: [1, 1.025, 1]
+          }} whileHover={{
+            opacity: 0.78,
+            scale: 1.035
+          }} whileTap={{
+            scale: 0.98
+          }} transition={{
+            duration: 2.2 + choiceIndex * 0.28,
+            repeat: Infinity,
+            ease: 'easeInOut'
+          }}>
+                  <span className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/30 text-lg opacity-55 shadow-[0_0_18px_rgba(255,255,255,0.16)] transition group-hover:opacity-90">
+                    {choice.icon}
+                  </span>
+                  <span className="absolute inset-0 rounded-full bg-white/[0.025] opacity-0 transition group-hover:opacity-100" />
+                  <span className="sr-only">{choice.description}</span>
+                </motion.button>)}
+
               <motion.div key={currentChaosScene.title} initial={{
             opacity: 0,
             y: 18
@@ -3884,28 +3937,8 @@ export function BoardGamePage() {
               </motion.div>
             </div>
 
-            <div className="relative z-40 border-t border-white/10 bg-black/60 px-4 py-4 backdrop-blur-xl">
-              {!chaosOutcome ? <div className="mx-auto grid max-w-5xl grid-cols-1 gap-3 md:grid-cols-3">
-                  {currentChaosScene.choices.map((choice) => <motion.button key={choice.label} onClick={() => handleChaosChoice(choice)} whileHover={{
-              y: -4,
-              scale: 1.02
-            }} whileTap={{
-              scale: 0.98
-            }} className={`rounded-2xl border p-4 text-left transition ${choice.tone === 'risk' ? 'border-cyan-400/35 bg-cyan-950/35 hover:bg-cyan-900/45' : choice.tone === 'hope' ? 'border-purple-400/35 bg-purple-950/35 hover:bg-purple-900/45' : 'border-amber-300/35 bg-amber-950/30 hover:bg-amber-900/40'}`}>
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/40 text-2xl">
-                          {choice.icon}
-                        </span>
-                        <div>
-                          <h4 className="font-black uppercase tracking-wide text-white">{choice.label}</h4>
-                          <p className="mt-1 text-xs font-semibold text-white/62">{choice.description}</p>
-                        </div>
-                      </div>
-                      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-white/45">
-                        Choose this
-                      </p>
-                    </motion.button>)}
-                </div> : <motion.div initial={{
+            <div className={`relative z-40 px-4 py-4 ${chaosOutcome ? 'border-t border-white/10 bg-black/60 backdrop-blur-xl' : 'pointer-events-none bg-transparent'}`}>
+              {chaosOutcome ? <motion.div initial={{
             opacity: 0,
             y: 14
           }} animate={{
@@ -3929,7 +3962,9 @@ export function BoardGamePage() {
                   <button onClick={continueChaosRealm} className="rounded-full bg-white px-7 py-3 font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.22)]">
                     {chaosOutcome.escape || chaosSceneIndex >= chaosRealmScenes.length - 1 ? 'Return to the Board' : 'Keep Moving'}
                   </button>
-                </motion.div>}
+                </motion.div> : <div className="mx-auto max-w-xl rounded-full border border-white/10 bg-black/25 px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.24em] text-white/45 backdrop-blur-sm">
+                  Click something in the scene
+                </div>}
             </div>
           </div>
         </div>}
