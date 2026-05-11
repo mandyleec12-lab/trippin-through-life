@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces: number) => {
+  const movePlayer = (spaces) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
@@ -2865,7 +2865,7 @@ export function BoardGamePage() {
         type: 'spring',
         stiffness: 80,
         damping: 20
-      }} className="bg-white/70 backdrop-blur-2xl p-8 md:p-12 rounded-[2rem] shadow-[0_20px_80px_rgba(168,85,247,0.15)] border border-white/80 max-w-2xl w-full text-center relative overflow-hidden">
+      }} className="bg-white/70 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_20px_80px_rgba(168,85,247,0.15)] border border-white/80 max-w-2xl w-full text-center relative overflow-y-auto max-h-[90dvh]">
           
             {/* Decorative glows */}
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-pink-300/30 rounded-full blur-3xl" />
