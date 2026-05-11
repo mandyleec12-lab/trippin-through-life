@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces: number) => {
+  const movePlayer = (spaces) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
