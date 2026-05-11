@@ -1728,7 +1728,7 @@ const CHAOS_REALM_TILE_POOL = [
   effect: 'exit',
   effectValue: 0
 }];
-const CHAOS_REALM_SCENES: ChaosScene[] = [{
+const CHAOS_REALM_SCENES = [{
   title: 'Car dead in the storm',
   subtitle: 'The engine clicks once, then gives up. Rain hammers the windshield.',
   location: 'Flooded service road',
@@ -2292,7 +2292,7 @@ export function BoardGamePage() {
   const [chaosSceneIndex, setChaosSceneIndex] = useState(0);
   const [selectedChaosChoice, setSelectedChaosChoice] = useState(null);
   const [chaosOutcome, setChaosOutcome] = useState(null);
-  const [eliminatedPlayers, setEliminatedPlayers] = useState<string[]>([]);
+  const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
   const [showChaosTransition, setShowChaosTransition] = useState(false);
   // Transportation event state
   const [transportEvent, setTransportEvent] = useState(null);
