@@ -5,7 +5,7 @@ import { HeartCrackIcon, DollarSignIcon, SparklesIcon, FlameIcon, StarIcon, Wand
 import { JourneyStartScene } from '../../components/games/JourneyStartScene';
 import { CityBackdrop } from '../../components/games/CityBackdrop';
 import { RoadView } from '../../components/games/RoadView';
-
+// --- TYPES (removed - plain JS) ---
 const PAWN_STEP_DURATION_MS = 440;
 const PAWN_LANDING_BUFFER_MS = 700;
 const STARTING_HAND_RESHUFFLE_LIMIT = 2;
@@ -1728,7 +1728,7 @@ const CHAOS_REALM_TILE_POOL = [
   effect: 'exit',
   effectValue: 0
 }];
-const CHAOS_REALM_SCENES = [{
+const CHAOS_REALM_SCENES: ChaosScene[] = [{
   title: 'Car dead in the storm',
   subtitle: 'The engine clicks once, then gives up. Rain hammers the windshield.',
   location: 'Flooded service road',
@@ -2489,7 +2489,7 @@ export function BoardGamePage() {
     const player = players[playerIndex];
     if (!player.job) return false;
     const job = player.job;
-    const skipAndNext = (msg) => {
+    const skipAndNext = (msg: string) => {
       setJobEffectMessage(msg);
       setPlayers((prev) => prev.map((p, i) => i === playerIndex ? {
         ...p,
@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces) => {
+  const movePlayer = (spaces: number) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
@@ -3226,7 +3226,7 @@ export function BoardGamePage() {
                 {players[currentPlayerIndex].name}
               </div>
               {players[currentPlayerIndex].job && <span className="text-sm">
-                  {players[currentPlayerIndex].job!.emoji}
+                  {players[currentPlayerIndex].job?.emoji}
                 </span>}
               {players[currentPlayerIndex].pathIndex === 0 && players[currentPlayerIndex].studentLoanDebt > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                     💳 Loans
