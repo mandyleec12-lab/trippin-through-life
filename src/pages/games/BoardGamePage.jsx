@@ -1728,7 +1728,7 @@ const CHAOS_REALM_TILE_POOL = [
   effect: 'exit',
   effectValue: 0
 }];
-const CHAOS_REALM_SCENES: ChaosScene[] = [{
+const CHAOS_REALM_SCENES = [{
   title: 'Car dead in the storm',
   subtitle: 'The engine clicks once, then gives up. Rain hammers the windshield.',
   location: 'Flooded service road',
@@ -2489,7 +2489,7 @@ export function BoardGamePage() {
     const player = players[playerIndex];
     if (!player.job) return false;
     const job = player.job;
-    const skipAndNext = (msg: string) => {
+    const skipAndNext = (msg) => {
       setJobEffectMessage(msg);
       setPlayers((prev) => prev.map((p, i) => i === playerIndex ? {
         ...p,
