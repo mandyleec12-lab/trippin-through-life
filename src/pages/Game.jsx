@@ -1,5 +1,5 @@
 import React from 'react';
-import { BoardGamePage } from '@/pages/games/BoardGamePage';
+import { BoardGamePage } from './games/BoardGamePage';
 
 /**
  * Uses the upgraded game implementation imported from the
