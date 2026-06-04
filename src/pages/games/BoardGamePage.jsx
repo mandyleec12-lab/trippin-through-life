@@ -5,7 +5,7 @@ import { HeartCrackIcon, DollarSignIcon, SparklesIcon, FlameIcon, StarIcon, Wand
 import { JourneyStartScene } from '../../components/games/JourneyStartScene';
 import { CityBackdrop } from '../../components/games/CityBackdrop';
 import { RoadView } from '../../components/games/RoadView';
-// --- TYPES (removed - plain JS) ---
+
 const PAWN_STEP_DURATION_MS = 440;
 const PAWN_LANDING_BUFFER_MS = 700;
 const STARTING_HAND_RESHUFFLE_LIMIT = 2;
@@ -2112,7 +2112,10 @@ const PIP_POSITIONS = {
   5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
   6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]]
 };
-function DiceFace({ value, style }) {
+function DiceFace({
+  value,
+  style
+}) {
   const pips = PIP_POSITIONS[value] || [];
   return <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white via-pink-50 to-purple-100 border-4 border-purple-300 shadow-[inset_0_0_20px_rgba(168,85,247,0.15)]" style={{
     ...style,
@@ -2168,7 +2171,11 @@ function getDiceFaceRotation(value) {
   }
 }
 // Floating particles component
-function FloatingParticles({ count = 30 }) {
+function FloatingParticles({
+  count = 30
+
+
+) {
   return <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
       {Array.from({
       length: count
@@ -2192,7 +2199,11 @@ function FloatingParticles({ count = 30 }) {
     </div>;
 }
 // Sparkle burst component for board landing
-function SparkleBurst({ active }) {
+function SparkleBurst({
+  active
+
+
+) {
   if (!active) return null;
   return <AnimatePresence>
       <div className="absolute inset-0 pointer-events-none z-10">
@@ -3226,7 +3237,7 @@ export function BoardGamePage() {
                 {players[currentPlayerIndex].name}
               </div>
               {players[currentPlayerIndex].job && <span className="text-sm">
-                  {players[currentPlayerIndex].job?.emoji}
+                  {players[currentPlayerIndex].job.emoji}
                 </span>}
               {players[currentPlayerIndex].pathIndex === 0 && players[currentPlayerIndex].studentLoanDebt > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                     💳 Loans
