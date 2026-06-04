@@ -2859,136 +2859,113 @@ export function BoardGamePage() {
       <FloatingParticles count={40} />
 
       {/* ========== SETUP ========== */}
-      {phase === 'setup' && <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
-          <motion.div initial={{
-        opacity: 0,
-        scale: 0.9,
-        y: 30
-      }} animate={{
-        opacity: 1,
-        scale: 1,
-        y: 0
-      }} transition={{
-        type: 'spring',
-        stiffness: 80,
-        damping: 20
-      }} className="bg-white/70 backdrop-blur-2xl p-8 md:p-12 rounded-[2rem] shadow-[0_20px_80px_rgba(168,85,247,0.15)] border border-white/80 max-w-2xl w-full text-center relative overflow-hidden">
-          
-            {/* Decorative glows */}
-            <div className="absolute -top-20 -left-20 w-40 h-40 bg-pink-300/30 rounded-full blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-purple-300/30 rounded-full blur-3xl" />
-            <div className="absolute -top-8 -left-8 rotate-12">
-              <GlitterHeart size={50} />
-            </div>
-            <div className="absolute -bottom-8 -right-8 -rotate-12">
-              <GlitterHeart size={50} />
-            </div>
+      {phase === 'setup' && <div className="absolute inset-0 z-10 overflow-y-auto" style={{background: 'linear-gradient(135deg, #6B21A8 0%, #9333EA 25%, #EC4899 55%, #F97316 80%, #FCD34D 100%)'}}>
+          {/* Sparkle particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {['✦','✧','⋆','✦','✧','⋆','✦','✧'].map((s,i) => <motion.span key={i} className="absolute text-white/60 text-xs" style={{left:`${10+i*12}%`, top:`${5+i*8}%`}} animate={{opacity:[0.3,1,0.3], scale:[0.8,1.2,0.8]}} transition={{duration:2+i*0.3, repeat:Infinity, delay:i*0.2}}>{s}</motion.span>)}
+          </div>
 
-            <motion.div animate={{
-          y: [0, -5, 0]
-        }} transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: 'easeInOut'
-        }}>
-            
-              <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 mb-2 pb-1" style={{
-            fontFamily: '"Dancing Script", cursive'
-          }}>
-              
-                Trippin' Through Life
-              </h1>
+          <div className="min-h-full flex items-center justify-center p-4 py-8">
+            <motion.div initial={{opacity:0, scale:0.9, y:30}} animate={{opacity:1, scale:1, y:0}} transition={{type:'spring', stiffness:80, damping:20}}
+              className="w-full max-w-2xl">
+
+              {/* Title */}
+              <div className="text-center mb-5">
+                <motion.h1 animate={{y:[0,-4,0]}} transition={{duration:3, repeat:Infinity, ease:'easeInOut'}}
+                  className="text-6xl md:text-7xl font-black leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                  style={{fontFamily:'"Dancing Script", cursive', WebkitTextStroke:'2px rgba(255,255,255,0.3)'}}>
+                  <span style={{color:'#FF6EB4', WebkitTextStroke:'2px #C2185B', textShadow:'0 4px 15px rgba(255,110,180,0.6), 0 0 30px rgba(255,20,147,0.4)'}}>Trippin' </span>
+                  <span style={{color:'#C084FC', WebkitTextStroke:'2px #7C3AED', textShadow:'0 4px 15px rgba(192,132,252,0.6)'}}>Through </span>
+                  <span style={{color:'#60A5FA', WebkitTextStroke:'2px #1D4ED8', textShadow:'0 4px 15px rgba(96,165,250,0.6)'}}>Life</span>
+                </motion.h1>
+                <p className="text-white/90 font-bold text-base mt-2 drop-shadow">
+                  ➜ The chaotic game of glow-ups, breakdowns &amp; tax season. 💀 ←
+                </p>
+              </div>
+
+              {/* Main card */}
+              <div className="bg-white/15 backdrop-blur-xl rounded-3xl border border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                
+                {/* Education path cards */}
+                <div className="grid grid-cols-3 gap-3 p-4 pb-3">
+                  {[
+                    {emoji:'🎓', name:'College', sub:'Survive the syllabus', bg:'bg-violet-100', border:'border-violet-300', text:'text-violet-700', subText:'text-violet-500'},
+                    {emoji:'📜', name:'High School Diploma / GED', sub:'Finish strong', bg:'bg-pink-100', border:'border-pink-300', text:'text-pink-600', subText:'text-pink-400'},
+                    {emoji:'⚡', name:'Dropout', sub:'Risk it all', bg:'bg-amber-100', border:'border-amber-300', text:'text-amber-700', subText:'text-amber-500'},
+                  ].map((path, i) => <motion.div key={i} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.2+i*0.1}}
+                      className={`${path.bg} ${path.border} border-2 rounded-2xl p-3 text-center`}>
+                    <div className="text-3xl mb-1">{path.emoji}</div>
+                    <p className={`text-xs font-black ${path.text} leading-tight`}>{path.name}</p>
+                    <p className={`text-[10px] font-semibold ${path.subText} mt-0.5`}>{path.sub}</p>
+                  </motion.div>)}
+                </div>
+
+                {/* Life deals your hand */}
+                <div className="text-center pb-2">
+                  <p className="text-white font-black text-lg drop-shadow">➜ Life deals your hand. ←</p>
+                </div>
+
+                {/* Player rows */}
+                <div className="space-y-2 px-4 pb-3">
+                  {players.map((player, index) => <motion.div key={player.id} initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:index*0.05}}
+                      className="flex items-center gap-3 bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-md">
+                    
+                    <label className="relative cursor-pointer shrink-0">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleAvatarUpload(player.id, f);
+                      }} />
+                      {player.avatar
+                        ? <div className={`w-14 h-14 rounded-full border-[3px] overflow-hidden shadow-lg ${PLAYER_BORDER[player.color]}`}>
+                            <img src={player.avatar} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        : <div className={`w-14 h-14 rounded-full ${PLAYER_COLORS[player.color]} shadow-lg flex items-center justify-center relative`}>
+                            <CameraIcon className="w-5 h-5 text-white/80" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow border-2 border-gray-100">
+                              <span className="text-[9px] font-black text-purple-500">+</span>
+                            </div>
+                          </div>}
+                    </label>
+
+                    <div className="flex-1 min-w-0">
+                      <input type="text" value={player.name} onChange={(e) => updatePlayer(player.id, 'name', e.target.value)}
+                        className="bg-transparent font-black text-gray-800 text-lg outline-none w-full" placeholder={`Player ${index + 1}`} />
+                      <p className="text-xs text-gray-400 font-medium">Choose your color &amp; journey</p>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <select value={player.color} onChange={(e) => updatePlayer(player.id, 'color', e.target.value)}
+                        className="bg-white border-2 border-purple-200 rounded-xl px-3 py-2 text-purple-700 font-black outline-none text-sm shadow-sm appearance-none pr-7 cursor-pointer">
+                        {(['pink','purple','blue','teal','gold','coral']).map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+                      </select>
+                      <span className="text-gray-400 -ml-6 pointer-events-none text-xs">▾</span>
+                    </div>
+
+                    {players.length > 2 && <button onClick={() => removePlayer(player.id)} className="text-rose-400 hover:text-rose-600 font-bold text-lg w-6 shrink-0">✕</button>}
+                  </motion.div>)}
+                </div>
+
+                {/* Upload hint */}
+                <div className="mx-4 mb-4 border border-dashed border-white/40 rounded-xl py-2 text-center">
+                  <p className="text-white/80 text-xs font-semibold">☁️ Tap the circle to upload a profile pic!</p>
+                </div>
+
+                {/* Bottom buttons */}
+                <div className="flex items-center gap-3 px-4 pb-4">
+                  {players.length < 6 && <button onClick={addPlayer}
+                    className="px-5 py-3 rounded-full bg-white/90 text-gray-700 font-bold text-sm border border-gray-200 shadow hover:bg-white transition-colors whitespace-nowrap">
+                    + Add Player
+                  </button>}
+                  <motion.button onClick={dealStartingHands} whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+                    className="flex-1 py-4 rounded-full font-black text-white text-lg shadow-[0_8px_30px_rgba(236,72,153,0.5)] tracking-wide"
+                    style={{background:'linear-gradient(90deg, #EC4899, #A855F7)'}}>
+                    DEAL STARTING HANDS 🃏
+                  </motion.button>
+                </div>
+              </div>
+
             </motion.div>
-            <p className="text-purple-400 font-bold mb-2 text-lg">
-              The chaotic game of glow-ups, breakdowns & tax season. 💀
-            </p>
-
-            {/* Education paths preview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6 mt-4">
-              {LIFE_PATHS.map((path, i) => <motion.div key={i} initial={{
-            opacity: 0,
-            y: 10
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            delay: 0.3 + i * 0.1
-          }} className={`${path.bgLight} ${path.borderColor} border rounded-xl p-2 text-center`}>
-              
-                  <span className="text-lg">{path.emoji}</span>
-                  <p className={`text-[10px] font-bold ${path.textColor} leading-tight`}>
-                
-                    {path.name}
-                  </p>
-                </motion.div>)}
-            </div>
-            <p className="text-purple-700 font-bold mb-4">
-              Life deals your hand.
-            </p>
-
-            <div className="space-y-3 mb-6 text-left">
-              {players.map((player, index) => <motion.div key={player.id} initial={{
-            opacity: 0,
-            x: -20
-          }} animate={{
-            opacity: 1,
-            x: 0
-          }} transition={{
-            delay: index * 0.05
-          }} className="flex items-center gap-3 bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-purple-100/50 shadow-sm">
-              
-                  <label className="relative cursor-pointer shrink-0 group">
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleAvatarUpload(player.id, f);
-              }} />
-                
-                    {player.avatar ? <div className={`w-12 h-12 rounded-full border-[3px] overflow-hidden shadow-lg shadow-purple-200/50 ${PLAYER_BORDER[player.color]}`}>
-                  
-                        <img src={player.avatar} alt="" className="w-full h-full object-cover" />
-                  
-                      </div> : <div className={`w-12 h-12 rounded-full ${PLAYER_COLORS[player.color]} shadow-lg flex items-center justify-center relative`}>
-                  
-                        <CameraIcon className="w-5 h-5 text-white/80" />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow">
-                          <span className="text-[8px] font-bold text-purple-500">
-                            +
-                          </span>
-                        </div>
-                      </div>}
-                  </label>
-                  <input type="text" value={player.name} onChange={(e) => updatePlayer(player.id, 'name', e.target.value)} className="flex-1 bg-transparent font-bold text-purple-800 text-lg outline-none min-w-0" placeholder={`Player ${index + 1}`} />
-              
-                  <select value={player.color} onChange={(e) => updatePlayer(player.id, 'color', e.target.value)} className="bg-white/80 border border-purple-200/50 rounded-xl px-2 py-1.5 text-purple-700 font-bold outline-none text-sm backdrop-blur-sm">
-                
-                    {(['pink', 'purple', 'blue', 'teal', 'gold', 'coral']).map((c) => <option key={c} value={c}>
-                        {c.charAt(0).toUpperCase() + c.slice(1)}
-                      </option>)}
-                  </select>
-                  {players.length > 2 && <button onClick={() => removePlayer(player.id)} className="text-rose-400 hover:text-rose-600 font-bold px-2">
-                
-                      ✕
-                    </button>}
-                </motion.div>)}
-            </div>
-            <p className="text-purple-400 text-sm font-medium mb-6">
-              📸 Tap the circle to upload a profile pic!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {players.length < 6 && <button onClick={addPlayer} className="px-6 py-3 rounded-full bg-purple-100/80 text-purple-600 font-bold hover:bg-purple-200/80 transition-colors backdrop-blur-sm">
-              
-                  + Add Player
-                </button>}
-              <motion.button onClick={dealStartingHands} whileHover={{
-            scale: 1.05
-          }} whileTap={{
-            scale: 0.98
-          }} className="px-10 py-4 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold text-xl shadow-[0_8px_30px_rgba(236,72,153,0.3)] hover:shadow-[0_12px_40px_rgba(236,72,153,0.4)] transition-shadow">
-              
-                DEAL STARTING HANDS 🃏
-              </motion.button>
-            </div>
-          </motion.div>
+          </div>
         </div>}
 
       {/* ========== STARTING DEAL ========== */}
