@@ -2173,9 +2173,7 @@ function getDiceFaceRotation(value) {
 // Floating particles component
 function FloatingParticles({
   count = 30
-
-
-) {
+}) {
   return <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
       {Array.from({
       length: count
@@ -2201,9 +2199,7 @@ function FloatingParticles({
 // Sparkle burst component for board landing
 function SparkleBurst({
   active
-
-
-) {
+}) {
   if (!active) return null;
   return <AnimatePresence>
       <div className="absolute inset-0 pointer-events-none z-10">
