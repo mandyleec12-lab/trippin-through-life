@@ -1,5 +1,5 @@
 import React from 'react';
-import { BoardGamePage } from './games/BoardGamePage';
+import { BoardGamePage } from './games/BoardGamePage.tsx';
 
 /**
  * Uses the upgraded game implementation imported from the
