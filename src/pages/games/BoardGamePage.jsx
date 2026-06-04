@@ -2865,50 +2865,50 @@ export function BoardGamePage() {
             {['✦','✧','⋆','✦','✧','⋆','✦','✧'].map((s,i) => <motion.span key={i} className="absolute text-white/60 text-xs" style={{left:`${10+i*12}%`, top:`${5+i*8}%`}} animate={{opacity:[0.3,1,0.3], scale:[0.8,1.2,0.8]}} transition={{duration:2+i*0.3, repeat:Infinity, delay:i*0.2}}>{s}</motion.span>)}
           </div>
 
-          <div className="min-h-full flex items-center justify-center p-4 py-8">
+          <div className="min-h-full flex items-center justify-center p-3 py-6">
             <motion.div initial={{opacity:0, scale:0.9, y:30}} animate={{opacity:1, scale:1, y:0}} transition={{type:'spring', stiffness:80, damping:20}}
               className="w-full max-w-2xl">
 
               {/* Title */}
-              <div className="text-center mb-5">
+              <div className="text-center mb-3">
                 <motion.h1 animate={{y:[0,-4,0]}} transition={{duration:3, repeat:Infinity, ease:'easeInOut'}}
-                  className="text-6xl md:text-7xl font-black leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
-                  style={{fontFamily:'"Dancing Script", cursive', WebkitTextStroke:'2px rgba(255,255,255,0.3)'}}>
-                  <span style={{color:'#FF6EB4', WebkitTextStroke:'2px #C2185B', textShadow:'0 4px 15px rgba(255,110,180,0.6), 0 0 30px rgba(255,20,147,0.4)'}}>Trippin' </span>
-                  <span style={{color:'#C084FC', WebkitTextStroke:'2px #7C3AED', textShadow:'0 4px 15px rgba(192,132,252,0.6)'}}>Through </span>
-                  <span style={{color:'#60A5FA', WebkitTextStroke:'2px #1D4ED8', textShadow:'0 4px 15px rgba(96,165,250,0.6)'}}>Life</span>
+                  className="font-black leading-none drop-shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                  style={{fontFamily:'"Dancing Script", cursive', fontSize:'clamp(2.4rem, 11vw, 4.5rem)'}}>
+                  <span style={{color:'#FF6EB4', WebkitTextStroke:'1px #C2185B', textShadow:'0 4px 15px rgba(255,110,180,0.6)'}}>Trippin' </span>
+                  <span style={{color:'#C084FC', WebkitTextStroke:'1px #7C3AED', textShadow:'0 4px 15px rgba(192,132,252,0.6)'}}>Through </span>
+                  <span style={{color:'#60A5FA', WebkitTextStroke:'1px #1D4ED8', textShadow:'0 4px 15px rgba(96,165,250,0.6)'}}>Life</span>
                 </motion.h1>
-                <p className="text-white/90 font-bold text-base mt-2 drop-shadow">
-                  ➜ The chaotic game of glow-ups, breakdowns &amp; tax season. 💀 ←
+                <p className="text-white/90 font-bold text-xs sm:text-sm mt-1 drop-shadow">
+                  The chaotic game of glow-ups, breakdowns &amp; tax season. 💀
                 </p>
               </div>
 
               {/* Main card */}
-              <div className="bg-white/15 backdrop-blur-xl rounded-3xl border border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
+              <div className="bg-white/15 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden">
                 
                 {/* Education path cards */}
-                <div className="grid grid-cols-3 gap-3 p-4 pb-3">
+                <div className="grid grid-cols-3 gap-2 p-3 pb-2">
                   {[
                     {emoji:'🎓', name:'College', sub:'Survive the syllabus', bg:'bg-violet-100', border:'border-violet-300', text:'text-violet-700', subText:'text-violet-500'},
-                    {emoji:'📜', name:'High School Diploma / GED', sub:'Finish strong', bg:'bg-pink-100', border:'border-pink-300', text:'text-pink-600', subText:'text-pink-400'},
+                    {emoji:'📜', name:'HS / GED', sub:'Finish strong', bg:'bg-pink-100', border:'border-pink-300', text:'text-pink-600', subText:'text-pink-400'},
                     {emoji:'⚡', name:'Dropout', sub:'Risk it all', bg:'bg-amber-100', border:'border-amber-300', text:'text-amber-700', subText:'text-amber-500'},
                   ].map((path, i) => <motion.div key={i} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.2+i*0.1}}
-                      className={`${path.bg} ${path.border} border-2 rounded-2xl p-3 text-center`}>
-                    <div className="text-3xl mb-1">{path.emoji}</div>
-                    <p className={`text-xs font-black ${path.text} leading-tight`}>{path.name}</p>
-                    <p className={`text-[10px] font-semibold ${path.subText} mt-0.5`}>{path.sub}</p>
+                      className={`${path.bg} ${path.border} border-2 rounded-xl p-2 text-center`}>
+                    <div className="text-2xl mb-0.5">{path.emoji}</div>
+                    <p className={`text-[10px] sm:text-xs font-black ${path.text} leading-tight`}>{path.name}</p>
+                    <p className={`text-[9px] sm:text-[10px] font-semibold ${path.subText} mt-0.5 hidden sm:block`}>{path.sub}</p>
                   </motion.div>)}
                 </div>
 
                 {/* Life deals your hand */}
-                <div className="text-center pb-2">
-                  <p className="text-white font-black text-lg drop-shadow">➜ Life deals your hand. ←</p>
+                <div className="text-center py-1">
+                  <p className="text-white font-black text-sm sm:text-base drop-shadow">➜ Life deals your hand. ←</p>
                 </div>
 
                 {/* Player rows */}
-                <div className="space-y-2 px-4 pb-3">
+                <div className="space-y-2 px-3 pb-2">
                   {players.map((player, index) => <motion.div key={player.id} initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay:index*0.05}}
-                      className="flex items-center gap-3 bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-md">
+                      className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2.5 rounded-xl shadow-md">
                     
                     <label className="relative cursor-pointer shrink-0">
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => {
@@ -2916,48 +2916,48 @@ export function BoardGamePage() {
                         if (f) handleAvatarUpload(player.id, f);
                       }} />
                       {player.avatar
-                        ? <div className={`w-14 h-14 rounded-full border-[3px] overflow-hidden shadow-lg ${PLAYER_BORDER[player.color]}`}>
+                        ? <div className={`w-11 h-11 rounded-full border-[3px] overflow-hidden shadow-lg ${PLAYER_BORDER[player.color]}`}>
                             <img src={player.avatar} alt="" className="w-full h-full object-cover" />
                           </div>
-                        : <div className={`w-14 h-14 rounded-full ${PLAYER_COLORS[player.color]} shadow-lg flex items-center justify-center relative`}>
-                            <CameraIcon className="w-5 h-5 text-white/80" />
-                            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow border-2 border-gray-100">
-                              <span className="text-[9px] font-black text-purple-500">+</span>
+                        : <div className={`w-11 h-11 rounded-full ${PLAYER_COLORS[player.color]} shadow-lg flex items-center justify-center relative`}>
+                            <CameraIcon className="w-4 h-4 text-white/80" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow border-2 border-gray-100">
+                              <span className="text-[8px] font-black text-purple-500">+</span>
                             </div>
                           </div>}
                     </label>
 
                     <div className="flex-1 min-w-0">
                       <input type="text" value={player.name} onChange={(e) => updatePlayer(player.id, 'name', e.target.value)}
-                        className="bg-transparent font-black text-gray-800 text-lg outline-none w-full" placeholder={`Player ${index + 1}`} />
-                      <p className="text-xs text-gray-400 font-medium">Choose your color &amp; journey</p>
+                        className="bg-transparent font-black text-gray-800 text-base outline-none w-full" placeholder={`Player ${index + 1}`} />
+                      <p className="text-[10px] text-gray-400 font-medium hidden sm:block">Choose your color &amp; journey</p>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <select value={player.color} onChange={(e) => updatePlayer(player.id, 'color', e.target.value)}
-                        className="bg-white border-2 border-purple-200 rounded-xl px-3 py-2 text-purple-700 font-black outline-none text-sm shadow-sm appearance-none pr-7 cursor-pointer">
+                        className="bg-white border-2 border-purple-200 rounded-lg px-2 py-1.5 text-purple-700 font-black outline-none text-xs shadow-sm appearance-none pr-5 cursor-pointer">
                         {(['pink','purple','blue','teal','gold','coral']).map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
                       </select>
-                      <span className="text-gray-400 -ml-6 pointer-events-none text-xs">▾</span>
+                      <span className="text-gray-400 -ml-4 pointer-events-none text-[10px]">▾</span>
                     </div>
 
-                    {players.length > 2 && <button onClick={() => removePlayer(player.id)} className="text-rose-400 hover:text-rose-600 font-bold text-lg w-6 shrink-0">✕</button>}
+                    {players.length > 2 && <button onClick={() => removePlayer(player.id)} className="text-rose-400 hover:text-rose-600 font-bold text-base w-5 shrink-0">✕</button>}
                   </motion.div>)}
                 </div>
 
                 {/* Upload hint */}
-                <div className="mx-4 mb-4 border border-dashed border-white/40 rounded-xl py-2 text-center">
-                  <p className="text-white/80 text-xs font-semibold">☁️ Tap the circle to upload a profile pic!</p>
+                <div className="mx-3 mb-3 border border-dashed border-white/40 rounded-lg py-1.5 text-center">
+                  <p className="text-white/80 text-[10px] sm:text-xs font-semibold">☁️ Tap the circle to upload a profile pic!</p>
                 </div>
 
                 {/* Bottom buttons */}
-                <div className="flex items-center gap-3 px-4 pb-4">
+                <div className="flex items-center gap-2 px-3 pb-3">
                   {players.length < 6 && <button onClick={addPlayer}
-                    className="px-5 py-3 rounded-full bg-white/90 text-gray-700 font-bold text-sm border border-gray-200 shadow hover:bg-white transition-colors whitespace-nowrap">
+                    className="px-4 py-2.5 rounded-full bg-white/90 text-gray-700 font-bold text-xs border border-gray-200 shadow hover:bg-white transition-colors whitespace-nowrap">
                     + Add Player
                   </button>}
                   <motion.button onClick={dealStartingHands} whileHover={{scale:1.03}} whileTap={{scale:0.97}}
-                    className="flex-1 py-4 rounded-full font-black text-white text-lg shadow-[0_8px_30px_rgba(236,72,153,0.5)] tracking-wide"
+                    className="flex-1 py-3.5 rounded-full font-black text-white text-sm sm:text-base shadow-[0_8px_30px_rgba(236,72,153,0.5)] tracking-wide"
                     style={{background:'linear-gradient(90deg, #EC4899, #A855F7)'}}>
                     DEAL STARTING HANDS 🃏
                   </motion.button>
