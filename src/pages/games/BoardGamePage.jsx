@@ -3220,13 +3220,13 @@ export function BoardGamePage() {
               Trippin' Through Life
             </h1>
             <div className="flex items-center gap-2">
-              {players[currentPlayerIndex].avatar && <img src={players[currentPlayerIndex].avatar!} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-white shadow" />}
+              {players[currentPlayerIndex].avatar && <img src={players[currentPlayerIndex].avatar} alt="" className="w-7 h-7 rounded-full object-cover border-2 border-white shadow" />}
               <div className={`px-3 py-1 rounded-full text-white font-bold text-xs shadow-lg ${PLAYER_COLORS[players[currentPlayerIndex].color]}`}>
               
                 {players[currentPlayerIndex].name}
               </div>
               {players[currentPlayerIndex].job && <span className="text-sm">
-                  {players[currentPlayerIndex].job!.emoji}
+                  {players[currentPlayerIndex].job.emoji}
                 </span>}
               {players[currentPlayerIndex].pathIndex === 0 && players[currentPlayerIndex].studentLoanDebt > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                     💳 Loans
@@ -3439,7 +3439,7 @@ export function BoardGamePage() {
                 duration: 0.5
               }} className="text-3xl font-bold text-red-600 mb-4 py-2 px-4 bg-red-50 rounded-2xl border-2 border-red-200 inline-block">
                   
-                          -${Math.abs(getTileById(zoomedTile).effectValue!)}
+                          -${Math.abs(getTileById(zoomedTile).effectValue)}
                         </motion.div>}
                     {getTileById(zoomedTile).effect === 'money_gain' && getTileById(zoomedTile).effectValue && <motion.div initial={{
                 scale: 0.5,

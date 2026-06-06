@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Neon billboard messages flanking the road
-const LEFT_BILLBOARDS = [
-  { text: 'Invest In\nYourself', sub: '📈', color: '#3b82f6' },
-  { text: 'Choices\nToday\nReality\nTomorrow', color: '#a855f7' },
-  { text: 'Focus\nPlan\nExecute\nRepeat', color: '#f59e0b' },
-  { text: 'Hustle\nHard', color: '#f97316' },
-  { text: 'Dream\nPlan\nBuild\nLive', color: '#ec4899' },
-];
-const RIGHT_BILLBOARDS = [
-  { text: 'Opportunity\nIs Everywhere', color: '#22d3ee' },
-  { text: 'No Risk\nNo Reward', color: '#f59e0b' },
-  { text: 'Build\nYour\nFuture', color: '#a78bfa' },
-  { text: 'Stay\nFocused', color: '#fbbf24' },
-  { text: 'Success\nStarts\nHere', color: '#34d399' },
-];
-const NEON_SIGNS = ['CAFE', 'GYM', 'BOOKS', 'MOTEL\nVACANCY', 'MARKET', '24/7'];
-
 const HOP_MS = 450;
 
 function useStepAnimation(target, resetKey) {
@@ -46,121 +29,69 @@ function useStepAnimation(target, resetKey) {
   return { displayed, hopping };
 }
 
-// The 3D pawn piece
+// 3D Pawn: ball on a stem
 function Pawn({ color, avatar, letter, hopping }) {
   const grad = {
-    pink: ['#f472b6','#ec4899','#be185d'],
+    pink:   ['#f472b6','#ec4899','#be185d'],
     purple: ['#c084fc','#a855f7','#7e22ce'],
-    blue: ['#60a5fa','#3b82f6','#1d4ed8'],
-    teal: ['#2dd4bf','#14b8a6','#0f766e'],
-    gold: ['#fbbf24','#f59e0b','#b45309'],
-    coral: ['#fb923c','#f97316','#c2410c'],
+    blue:   ['#60a5fa','#3b82f6','#1d4ed8'],
+    teal:   ['#2dd4bf','#14b8a6','#0f766e'],
+    gold:   ['#fbbf24','#f59e0b','#b45309'],
+    coral:  ['#fb923c','#f97316','#c2410c'],
   }[color] || ['#c084fc','#a855f7','#7e22ce'];
 
   return (
     <motion.div
       className="relative flex flex-col items-center"
-      style={{ width: 72, height: 88 }}
+      style={{ width: 80, height: 100 }}
       animate={hopping
-        ? { y: [0, -36, 0], scaleX: [1, 0.96, 1.04, 1], scaleY: [1, 1.08, 0.92, 1] }
-        : { y: [0, -4, 0] }
+        ? { y: [0, -40, 0], scaleX: [1, 0.95, 1.05, 1], scaleY: [1, 1.1, 0.9, 1] }
+        : { y: [0, -5, 0] }
       }
       transition={hopping
         ? { duration: HOP_MS * 0.72 / 1000, ease: [0.22, 1, 0.36, 1] }
-        : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+        : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
       }
     >
-      {/* Shadow */}
+      {/* Shadow on road */}
       <div className="absolute bottom-0 rounded-full blur-md"
-        style={{ width: 56, height: 14, background: 'rgba(0,0,0,0.7)' }} />
+        style={{ width: 64, height: 16, background: 'rgba(0,0,0,0.8)' }} />
+      {/* Stem base disc */}
+      <div className="absolute rounded-full"
+        style={{
+          bottom: 14, left: '50%', transform: 'translateX(-50%)',
+          width: 28, height: 12,
+          background: `linear-gradient(to bottom, ${grad[0]}88, ${grad[2]}cc)`,
+          boxShadow: `0 0 16px ${grad[1]}aa`,
+        }} />
       {/* Stem */}
       <div className="absolute rounded-full"
         style={{
-          bottom: 12, width: 22, height: 22,
+          bottom: 22, left: '50%', transform: 'translateX(-50%)',
+          width: 14, height: 30,
           background: `linear-gradient(to bottom, ${grad[0]}, ${grad[2]})`,
-          boxShadow: `0 0 18px ${grad[1]}cc`,
+          boxShadow: `0 0 12px ${grad[1]}88`,
         }} />
-      {/* Head */}
-      <div className="absolute rounded-full border-2 border-white/40 flex items-center justify-center overflow-hidden"
+      {/* Ball head */}
+      <div className="absolute rounded-full border-2 border-white/30 flex items-center justify-center overflow-hidden"
         style={{
-          bottom: 26, width: 52, height: 52,
-          background: `linear-gradient(135deg, ${grad[0]}, ${grad[1]}, ${grad[2]})`,
-          boxShadow: `0 0 28px ${grad[1]}dd, inset 0 4px 8px rgba(255,255,255,0.3)`,
+          bottom: 44, left: '50%', transform: 'translateX(-50%)',
+          width: 58, height: 58,
+          background: `radial-gradient(circle at 35% 30%, ${grad[0]}, ${grad[1]} 50%, ${grad[2]})`,
+          boxShadow: `0 0 32px ${grad[1]}cc, 0 0 60px ${grad[1]}55, inset 0 4px 10px rgba(255,255,255,0.4)`,
         }}>
         {avatar
           ? <img src={avatar} alt="" className="w-full h-full object-cover" />
-          : <span className="text-white font-black text-lg drop-shadow">{letter}</span>
+          : <span className="text-white font-black text-xl drop-shadow">{letter}</span>
         }
-        {/* Shine */}
-        <div className="absolute top-1 left-2 w-5 h-2 rounded-full bg-white/40 blur-sm" />
+        {/* Specular highlight */}
+        <div className="absolute top-2 left-3 w-6 h-3 rounded-full bg-white/50 blur-sm" />
       </div>
     </motion.div>
   );
 }
 
-// A single tile card embedded in the road
-function RoadTile({ tile, icon: Icon, distFromCurrent, laneColor, perspectiveIndex, totalVisible }) {
-  const isCurrent = distFromCurrent === 0;
-  const isAhead = distFromCurrent > 0;
-
-  // Perspective: tiles further ahead appear smaller and higher
-  const depthT = (distFromCurrent + 1) / (totalVisible + 1); // 0=close, 1=far
-  const scale = isCurrent ? 1 : Math.max(0.28, 1 - distFromCurrent * 0.18);
-  const opacity = isCurrent ? 1 : Math.max(0.35, 1 - distFromCurrent * 0.2);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scaleX: 0.8 }}
-      animate={{ opacity, scale }}
-      className="relative rounded-xl border flex flex-col items-center justify-center text-center overflow-hidden"
-      style={{
-        borderColor: isCurrent ? `${laneColor}cc` : `${laneColor}66`,
-        background: isCurrent
-          ? `linear-gradient(180deg, rgba(20,10,40,0.97), rgba(5,2,15,0.99))`
-          : `linear-gradient(180deg, rgba(15,8,30,0.92), rgba(3,1,10,0.96))`,
-        boxShadow: isCurrent
-          ? `0 0 40px ${laneColor}88, 0 0 80px ${laneColor}44, inset 0 1px 0 rgba(255,255,255,0.15)`
-          : `0 0 12px ${laneColor}33, inset 0 1px 0 rgba(255,255,255,0.08)`,
-        padding: isCurrent ? '14px 20px' : '8px 12px',
-      }}
-    >
-      {/* Neon border glow strip */}
-      <div className="absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, ${laneColor}, transparent)` }} />
-      <div className="absolute inset-x-0 bottom-0 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, ${laneColor}88, transparent)` }} />
-
-      {isCurrent && (
-        <motion.div
-          className="absolute inset-0 rounded-xl pointer-events-none"
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 1.8, repeat: Infinity }}
-          style={{ background: `radial-gradient(ellipse at 50% 0%, ${laneColor}22, transparent 70%)` }}
-        />
-      )}
-
-      <div className="relative z-10 flex flex-col items-center gap-1">
-        {isCurrent && <Icon className="w-5 h-5 mb-1" style={{ color: laneColor }} />}
-        {!isCurrent && distFromCurrent <= 2 && (
-          <p className="text-[7px] font-black uppercase tracking-widest opacity-60" style={{ color: laneColor }}>
-            Space {perspectiveIndex}
-          </p>
-        )}
-        {(isCurrent || distFromCurrent <= 2) && (
-          <p className={`font-black text-white leading-tight ${isCurrent ? 'text-sm' : 'text-[8px]'}`}
-            style={{ textShadow: isCurrent ? `0 0 12px ${laneColor}` : 'none' }}>
-            {isCurrent ? tile.name : tile.name}
-          </p>
-        )}
-        {distFromCurrent > 2 && (
-          <div className="w-2 h-2 rounded-full" style={{ background: laneColor, boxShadow: `0 0 6px ${laneColor}` }} />
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, focusedPathIndex, getTileById, categoryStyles }) {
+export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, focusedPathIndex, getTileById, categoryStyles, playerColors }) {
   const currentPlayer = players[currentPlayerIndex];
   const pathIdx = focusedPathIndex !== null && focusedPathIndex !== undefined
     ? focusedPathIndex
@@ -174,12 +105,11 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
     `${currentPlayer?.id}-${pathIdx}`
   );
 
-  // Color per path
-  const LANE_COLORS = ['#a855f7', '#ec4899', '#f97316'];
+  const LANE_COLORS = ['#a855f7', '#ec4899', '#f59e0b'];
   const laneColor = LANE_COLORS[pathIdx] ?? '#a855f7';
 
-  // Show tiles: current + up to 5 ahead
-  const SHOW_AHEAD = 5;
+  // Show current tile + up to 6 ahead (they shrink toward horizon)
+  const SHOW_AHEAD = 6;
   const visibleTiles = [];
   for (let d = 0; d <= SHOW_AHEAD; d++) {
     const idx = displayPos + d;
@@ -187,307 +117,480 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
     visibleTiles.push({ tileIndex: idx, dist: d });
   }
 
-  // Billboard picks based on path progress
-  const progress = displayPos / Math.max(1, totalTiles - 1);
-  const leftBB = LEFT_BILLBOARDS[Math.floor(progress * LEFT_BILLBOARDS.length) % LEFT_BILLBOARDS.length];
-  const rightBB = RIGHT_BILLBOARDS[Math.floor(progress * RIGHT_BILLBOARDS.length) % RIGHT_BILLBOARDS.length];
-  const leftSign = NEON_SIGNS[pathIdx % NEON_SIGNS.length];
-  const rightSign = NEON_SIGNS[(pathIdx + 2) % NEON_SIGNS.length];
+  // Perspective trapezoid geometry for each tile
+  // Tile at dist=0 (current): large near camera
+  // Tiles shrink as dist increases toward horizon
+  // We place them in a CSS perspective container, stacked vertically
+
+  // Tile dimensions: width narrows, height shrinks with distance
+  const getTileDims = (dist) => {
+    const scale = Math.pow(0.62, dist);
+    const w = Math.round(560 * scale);
+    const h = Math.round(110 * scale);
+    return { w, h };
+  };
+
+  // Vertical gap between tiles (also perspective-compressed)
+  const getGap = (dist) => Math.round(8 * Math.pow(0.62, dist));
 
   return (
-    <div className="absolute inset-0 overflow-hidden" style={{ background: 'linear-gradient(180deg, #020408 0%, #04080f 40%, #080410 100%)' }}>
+    <div className="absolute inset-0 overflow-hidden select-none"
+      style={{ background: 'linear-gradient(180deg, #010308 0%, #020510 45%, #03020a 100%)' }}>
 
-      {/* ─── CITY SKYLINE ─── */}
-      <div className="absolute inset-x-0 top-0 h-[45%] overflow-hidden">
-        {/* Sky gradient */}
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(180deg, #010206 0%, #02040e 50%, #06020f 100%)'
-        }} />
-        {/* Buildings */}
+      {/* ── SKY + CITY SKYLINE ── */}
+      <div className="absolute inset-x-0 top-0" style={{ height: '52%' }}>
+        {/* Deep night sky gradient */}
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(180deg, #000208 0%, #01041a 55%, #050218 100%)' }} />
+
+        {/* Stars */}
+        {[...Array(40)].map((_, i) => (
+          <motion.div key={`star-${i}`}
+            className="absolute rounded-full bg-white"
+            style={{
+              width: i % 5 === 0 ? 2 : 1,
+              height: i % 5 === 0 ? 2 : 1,
+              left: `${(i * 7.3 + 3) % 100}%`,
+              top: `${(i * 11.7 + 2) % 45}%`,
+              opacity: 0.4 + (i % 3) * 0.2,
+            }}
+            animate={{ opacity: [0.3, 0.9, 0.3] }}
+            transition={{ duration: 2 + i % 4, repeat: Infinity, delay: i * 0.15 }}
+          />
+        ))}
+
+        {/* City buildings silhouette — left cluster */}
         {[
-          { l: '2%', w: '7%', h: '52%', windows: 24, accent: laneColor },
-          { l: '9%', w: '5%', h: '38%', windows: 15 },
-          { l: '14%', w: '9%', h: '62%', windows: 35, accent: '#f97316' },
-          { l: '23%', w: '6%', h: '44%', windows: 18 },
-          { l: '29%', w: '8%', h: '55%', windows: 28, accent: '#3b82f6' },
-          { l: '37%', w: '5%', h: '35%', windows: 12 },
-          { l: '42%', w: '7%', h: '70%', windows: 42, accent: laneColor, isPinacle: true },
-          { l: '49%', w: '5%', h: '40%', windows: 16 },
-          { l: '54%', w: '6%', h: '48%', windows: 22 },
-          { l: '60%', w: '8%', h: '58%', windows: 30, accent: '#ec4899' },
-          { l: '68%', w: '5%', h: '36%', windows: 14 },
-          { l: '73%', w: '9%', h: '65%', windows: 38, accent: '#22d3ee' },
-          { l: '82%', w: '6%', h: '43%', windows: 20 },
-          { l: '88%', w: '7%', h: '50%', windows: 26, accent: laneColor },
-          { l: '95%', w: '5%', h: '32%', windows: 10 },
+          { l: '0%',  w: '7%',  h: '75%', windows: 24, accent: null },
+          { l: '6%',  w: '5%',  h: '55%', windows: 16, accent: laneColor },
+          { l: '10%', w: '8%',  h: '85%', windows: 32, accent: '#f97316', tall: true },
+          { l: '17%', w: '6%',  h: '62%', windows: 20, accent: null },
+          { l: '22%', w: '7%',  h: '70%', windows: 28, accent: '#3b82f6' },
+          { l: '28%', w: '5%',  h: '45%', windows: 14, accent: null },
+          { l: '32%', w: '6%',  h: '58%', windows: 18, accent: laneColor },
         ].map((b, i) => (
-          <div key={i} className="absolute bottom-0 rounded-t-sm"
+          <div key={`bl-${i}`} className="absolute bottom-0 rounded-t-sm"
             style={{
               left: b.l, width: b.w, height: b.h,
-              background: 'linear-gradient(180deg, #0a0a1a, #040408)',
-              boxShadow: b.accent ? `0 0 20px ${b.accent}33` : undefined,
+              background: `linear-gradient(180deg, #0d0d1e, #060610)`,
+              boxShadow: b.accent ? `0 0 30px ${b.accent}33` : undefined,
             }}>
-            {/* Windows grid */}
-            <div className="absolute inset-x-1 top-2 grid grid-cols-3 gap-0.5">
-              {Array.from({ length: Math.min(b.windows, 30) }).map((_, wi) => (
+            <div className="absolute inset-x-1 top-2 grid grid-cols-3 gap-px">
+              {Array.from({ length: Math.min(b.windows, 24) }).map((_, wi) => (
                 <div key={wi} className="h-1 rounded-sm"
                   style={{
                     background: wi % 7 === 0 ? (b.accent || '#fbbf24') :
-                      wi % 5 === 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.06)',
-                    boxShadow: wi % 7 === 0 ? `0 0 6px ${b.accent || '#fbbf24'}` : undefined,
+                      wi % 4 === 0 ? 'rgba(255,255,200,0.6)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: wi % 7 === 0 ? `0 0 8px ${b.accent || '#fbbf24'}` : undefined,
                   }} />
               ))}
             </div>
-            {/* Tower top glow for tallest buildings */}
-            {b.isPinacle && (
+            {b.tall && (
               <motion.div className="absolute -top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full"
-                style={{ background: laneColor, boxShadow: `0 0 20px ${laneColor}` }}
-                animate={{ opacity: [1, 0.2, 1] }}
-                transition={{ duration: 1.2, repeat: Infinity }} />
+                style={{ background: laneColor, boxShadow: `0 0 16px ${laneColor}` }}
+                animate={{ opacity: [1, 0.1, 1] }}
+                transition={{ duration: 1.1, repeat: Infinity }} />
             )}
           </div>
         ))}
+
+        {/* City buildings silhouette — right cluster */}
+        {[
+          { r: '0%',  w: '7%',  h: '72%', windows: 22, accent: null },
+          { r: '6%',  w: '5%',  h: '50%', windows: 15, accent: '#ec4899' },
+          { r: '10%', w: '8%',  h: '90%', windows: 35, accent: '#22d3ee', tall: true },
+          { r: '17%', w: '6%',  h: '65%', windows: 21, accent: null },
+          { r: '22%', w: '7%',  h: '68%', windows: 26, accent: laneColor },
+          { r: '28%', w: '5%',  h: '42%', windows: 13, accent: null },
+          { r: '32%', w: '6%',  h: '55%', windows: 17, accent: '#f59e0b' },
+        ].map((b, i) => (
+          <div key={`br-${i}`} className="absolute bottom-0 rounded-t-sm"
+            style={{
+              right: b.r, width: b.w, height: b.h,
+              background: `linear-gradient(180deg, #0d0d1e, #060610)`,
+              boxShadow: b.accent ? `0 0 30px ${b.accent}33` : undefined,
+            }}>
+            <div className="absolute inset-x-1 top-2 grid grid-cols-3 gap-px">
+              {Array.from({ length: Math.min(b.windows, 24) }).map((_, wi) => (
+                <div key={wi} className="h-1 rounded-sm"
+                  style={{
+                    background: wi % 6 === 0 ? (b.accent || '#fbbf24') :
+                      wi % 4 === 0 ? 'rgba(255,255,200,0.5)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: wi % 6 === 0 ? `0 0 8px ${b.accent || '#fbbf24'}` : undefined,
+                  }} />
+              ))}
+            </div>
+            {b.tall && (
+              <motion.div className="absolute -top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full"
+                style={{ background: b.accent || laneColor, boxShadow: `0 0 16px ${b.accent || laneColor}` }}
+                animate={{ opacity: [1, 0.1, 1] }}
+                transition={{ duration: 0.9, repeat: Infinity, delay: 0.4 }} />
+            )}
+          </div>
+        ))}
+
         {/* Horizon glow */}
-        <div className="absolute bottom-0 inset-x-0 h-12"
-          style={{ background: `linear-gradient(0deg, ${laneColor}22, transparent)` }} />
+        <div className="absolute bottom-0 inset-x-0 h-16"
+          style={{ background: `linear-gradient(0deg, ${laneColor}1a 0%, transparent 100%)` }} />
+
+        {/* Vanishing point glow */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2"
+          style={{
+            width: 300, height: 80,
+            background: `radial-gradient(ellipse at 50% 100%, ${laneColor}44, transparent 70%)`,
+            filter: 'blur(8px)',
+          }} />
       </div>
 
-      {/* ─── WET ROAD SURFACE ─── */}
-      <div className="absolute bottom-0 inset-x-0 h-[60%]"
-        style={{ background: 'linear-gradient(180deg, #050210 0%, #020108 100%)' }}>
-        {/* Road reflections / wet sheen */}
+      {/* ── WET ROAD SURFACE ── */}
+      <div className="absolute inset-x-0 bottom-0" style={{ top: '48%' }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(180deg, #040112 0%, #020008 100%)' }} />
+
+        {/* Road wet sheen / reflection */}
         <div className="absolute inset-0"
           style={{
-            background: `linear-gradient(180deg, ${laneColor}08 0%, transparent 30%), radial-gradient(ellipse at 50% 20%, ${laneColor}18, transparent 60%)`,
+            background: `radial-gradient(ellipse at 50% 0%, ${laneColor}18 0%, transparent 55%), linear-gradient(180deg, ${laneColor}0a 0%, transparent 40%)`,
           }} />
-        {/* Yellow center lines */}
-        {[0, 1].map(i => (
-          <div key={i} className="absolute top-[5%] bottom-0"
+
+        {/* Yellow center lane lines — two parallel dashes converging to horizon */}
+        <div className="absolute top-0 bottom-0"
+          style={{ left: 'calc(50% - 6px)', width: 3,
+            background: `repeating-linear-gradient(180deg, #fbbf24 0px, #fbbf24 48px, transparent 48px, transparent 80px)`,
+            opacity: 0.75 }} />
+        <div className="absolute top-0 bottom-0"
+          style={{ left: 'calc(50% + 3px)', width: 3,
+            background: `repeating-linear-gradient(180deg, #fbbf24 0px, #fbbf24 48px, transparent 48px, transparent 80px)`,
+            opacity: 0.75 }} />
+
+        {/* Wet road reflection streaks */}
+        {[0,1,2,3,4,5].map(i => (
+          <motion.div key={`streak-${i}`}
+            className="absolute"
             style={{
-              left: `${47 + i * 6}%`, width: 3,
-              background: `repeating-linear-gradient(180deg, #fbbf24 0px, #fbbf24 40px, transparent 40px, transparent 70px)`,
-              opacity: 0.7,
-            }} />
-        ))}
-        {/* Subtle wet road reflection streaks */}
-        {[0,1,2,3,4].map(i => (
-          <motion.div key={i} className="absolute"
-            style={{
-              left: `${20 + i * 14}%`, top: '15%',
-              width: 2, height: '60%',
-              background: `linear-gradient(180deg, transparent, ${laneColor}44, transparent)`,
-              opacity: 0.3,
+              left: `${8 + i * 16}%`, top: '5%',
+              width: 2, height: '70%',
+              background: `linear-gradient(180deg, transparent, ${laneColor}33, transparent)`,
             }}
-            animate={{ opacity: [0.2, 0.5, 0.2] }}
-            transition={{ duration: 2 + i, repeat: Infinity, delay: i * 0.4 }} />
+            animate={{ opacity: [0.2, 0.6, 0.2] }}
+            transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, delay: i * 0.3 }} />
         ))}
       </div>
 
-      {/* ─── LEFT SIDEWALK + BUILDINGS ─── */}
-      <div className="absolute left-0 top-[30%] bottom-0 w-[22%]"
-        style={{ background: 'linear-gradient(90deg, #020106, #040210)' }}>
-        <div className="absolute right-0 top-0 bottom-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
-        {/* Streetlight */}
-        <div className="absolute right-4 top-0 w-1 h-[55%] bg-gray-700 rounded-full">
-          <div className="absolute -right-3 top-0 w-8 h-1 bg-gray-600 rounded-full" />
-          <motion.div className="absolute -right-2 top-0 w-4 h-4 rounded-full"
-            style={{ background: '#fbbf24', boxShadow: '0 0 30px #fbbf2488' }}
-            animate={{ opacity: [0.8, 1, 0.8] }}
-            transition={{ duration: 2, repeat: Infinity }} />
+      {/* ── LEFT SIDEWALK + SHOPS ── */}
+      <div className="absolute left-0 bottom-0" style={{ top: '38%', width: '18%' }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(90deg, #010108, #030214)' }} />
+        {/* Curb line */}
+        <div className="absolute right-0 top-0 bottom-0 w-1"
+          style={{ background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.12), transparent)' }} />
+
+        {/* Streetlight pole */}
+        <div className="absolute right-6 top-0 w-1 bg-gray-700 rounded-full" style={{ height: '55%' }}>
+          <div className="absolute -right-5 top-0 w-10 h-1 bg-gray-600 rounded-full" />
+          <motion.div className="absolute -right-3 top-0 w-6 h-6 rounded-full"
+            style={{ background: '#fef3c7', boxShadow: '0 0 40px #fbbf24, 0 0 80px #fbbf2444' }}
+            animate={{ opacity: [0.85, 1, 0.85] }}
+            transition={{ duration: 2.5, repeat: Infinity }} />
         </div>
-        {/* Store fronts */}
-        <div className="absolute bottom-0 left-0 right-0 h-[50%] border-t border-white/10"
-          style={{ background: 'linear-gradient(0deg, #060214, #03010a)' }}>
-          <div className="absolute top-2 left-2 right-2 h-8 border border-white/10 rounded flex items-center justify-center"
+
+        {/* Shop fronts */}
+        <div className="absolute bottom-0 inset-x-0" style={{ height: '52%',
+          background: 'linear-gradient(0deg, #060118, #020010)',
+          borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+
+          {/* LOANS sign */}
+          <motion.div className="absolute top-3 left-2 right-3 h-10 border rounded-sm flex items-center justify-center"
+            style={{ borderColor: '#ef444466', background: 'rgba(0,0,0,0.7)' }}
+            animate={{ boxShadow: ['0 0 12px #ef444433', '0 0 28px #ef444488', '0 0 12px #ef444433'] }}
+            transition={{ duration: 1.6, repeat: Infinity }}>
+            <span className="text-sm font-black tracking-widest"
+              style={{ color: '#ef4444', textShadow: '0 0 14px #ef4444' }}>LOANS</span>
+          </motion.div>
+
+          {/* CAFE sign */}
+          <motion.div className="absolute top-16 left-3 w-8 border rounded-sm flex items-center justify-center py-1"
+            style={{ borderColor: '#fbbf2466', background: 'rgba(0,0,0,0.7)' }}
+            animate={{ boxShadow: ['0 0 8px #fbbf2422', '0 0 20px #fbbf2466', '0 0 8px #fbbf2422'] }}
+            transition={{ duration: 2, repeat: Infinity }}>
+            <span className="text-[9px] font-black"
+              style={{ color: '#fbbf24', textShadow: '0 0 10px #fbbf24', writingMode: 'vertical-rl' }}>CAFE</span>
+          </motion.div>
+
+          {/* Sidewalk message board */}
+          <div className="absolute bottom-4 left-2 right-3 rounded border border-white/10 p-2"
             style={{ background: 'rgba(0,0,0,0.6)' }}>
-            <motion.span className="text-[10px] font-black tracking-widest"
-              style={{ color: '#fbbf24', textShadow: '0 0 12px #fbbf24' }}
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 1.5, repeat: Infinity }}>
-              {leftSign}
-            </motion.span>
+            <p className="text-[9px] font-bold leading-tight text-white/70">
+              Choices<br/>Today<br/>Reality<br/>Tomorrow
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ─── RIGHT SIDEWALK + BUILDINGS ─── */}
-      <div className="absolute right-0 top-[30%] bottom-0 w-[22%]"
-        style={{ background: 'linear-gradient(270deg, #020106, #040210)' }}>
-        <div className="absolute left-0 top-0 bottom-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
-        {/* Streetlight */}
-        <div className="absolute left-4 top-0 w-1 h-[55%] bg-gray-700 rounded-full">
-          <div className="absolute -left-3 top-0 w-8 h-1 bg-gray-600 rounded-full" />
-          <motion.div className="absolute -left-2 top-0 w-4 h-4 rounded-full"
-            style={{ background: '#fbbf24', boxShadow: '0 0 30px #fbbf2488' }}
-            animate={{ opacity: [0.8, 1, 0.8] }}
-            transition={{ duration: 2.3, repeat: Infinity }} />
+      {/* ── RIGHT SIDEWALK + SHOPS ── */}
+      <div className="absolute right-0 bottom-0" style={{ top: '38%', width: '18%' }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(270deg, #010108, #030214)' }} />
+        {/* Curb line */}
+        <div className="absolute left-0 top-0 bottom-0 w-1"
+          style={{ background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.12), transparent)' }} />
+
+        {/* Streetlight pole */}
+        <div className="absolute left-6 top-0 w-1 bg-gray-700 rounded-full" style={{ height: '55%' }}>
+          <div className="absolute -left-5 top-0 w-10 h-1 bg-gray-600 rounded-full" />
+          <motion.div className="absolute -left-3 top-0 w-6 h-6 rounded-full"
+            style={{ background: '#fef3c7', boxShadow: '0 0 40px #fbbf24, 0 0 80px #fbbf2444' }}
+            animate={{ opacity: [0.85, 1, 0.85] }}
+            transition={{ duration: 2.8, repeat: Infinity }} />
         </div>
-        {/* Store fronts */}
-        <div className="absolute bottom-0 left-0 right-0 h-[50%] border-t border-white/10"
-          style={{ background: 'linear-gradient(0deg, #060214, #03010a)' }}>
-          <div className="absolute top-2 left-2 right-2 h-8 border border-white/10 rounded flex items-center justify-center"
+
+        {/* Shop fronts */}
+        <div className="absolute bottom-0 inset-x-0" style={{ height: '52%',
+          background: 'linear-gradient(0deg, #060118, #020010)',
+          borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+
+          {/* MARKET sign */}
+          <motion.div className="absolute top-3 left-3 right-2 h-10 border rounded-sm flex items-center justify-center"
+            style={{ borderColor: '#22d3ee66', background: 'rgba(0,0,0,0.7)' }}
+            animate={{ boxShadow: ['0 0 12px #22d3ee33', '0 0 28px #22d3ee88', '0 0 12px #22d3ee33'] }}
+            transition={{ duration: 1.9, repeat: Infinity }}>
+            <span className="text-sm font-black tracking-widest"
+              style={{ color: '#22d3ee', textShadow: '0 0 14px #22d3ee' }}>MARKET</span>
+          </motion.div>
+
+          {/* 24/7 sign */}
+          <motion.div className="absolute top-16 right-3 w-9 border rounded-sm flex items-center justify-center py-1"
+            style={{ borderColor: '#a855f766', background: 'rgba(0,0,0,0.7)' }}
+            animate={{ boxShadow: ['0 0 8px #a855f722', '0 0 20px #a855f766', '0 0 8px #a855f722'] }}
+            transition={{ duration: 1.7, repeat: Infinity }}>
+            <span className="text-[9px] font-black"
+              style={{ color: '#a855f7', textShadow: '0 0 10px #a855f7' }}>24/7</span>
+          </motion.div>
+
+          {/* Right side message board */}
+          <div className="absolute bottom-4 left-3 right-2 rounded border border-white/10 p-2 text-right"
             style={{ background: 'rgba(0,0,0,0.6)' }}>
-            <motion.span className="text-[10px] font-black tracking-widest"
-              style={{ color: '#34d399', textShadow: '0 0 12px #34d399' }}
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 1.8, repeat: Infinity }}>
-              {rightSign}
-            </motion.span>
+            <p className="text-[9px] font-bold leading-tight text-white/70">
+              No Risk<br/>No Reward
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ─── LEFT BILLBOARD ─── */}
-      <div className="absolute" style={{ left: '1%', top: '8%', width: '18%' }}>
-        <motion.div
-          className="rounded-lg border p-3"
-          style={{
-            borderColor: `${leftBB.color}66`,
-            background: 'rgba(0,0,0,0.85)',
-            boxShadow: `0 0 30px ${leftBB.color}44`,
-          }}
-          animate={{ boxShadow: [`0 0 20px ${leftBB.color}33`, `0 0 40px ${leftBB.color}66`, `0 0 20px ${leftBB.color}33`] }}
-          transition={{ duration: 2.5, repeat: Infinity }}
-        >
+      {/* ── LEFT LARGE BILLBOARD ── */}
+      <div className="absolute" style={{ left: '1%', top: '6%', width: '16%' }}>
+        <motion.div className="rounded-lg border-2 p-3"
+          style={{ borderColor: `${laneColor}88`, background: 'rgba(0,0,0,0.88)',
+            boxShadow: `0 0 40px ${laneColor}44` }}
+          animate={{ boxShadow: [`0 0 20px ${laneColor}33`, `0 0 50px ${laneColor}77`, `0 0 20px ${laneColor}33`] }}
+          transition={{ duration: 2.5, repeat: Infinity }}>
           <p className="font-black text-sm leading-tight whitespace-pre-line"
-            style={{ color: leftBB.color, textShadow: `0 0 16px ${leftBB.color}` }}>
-            {leftBB.text}
+            style={{ color: laneColor, textShadow: `0 0 18px ${laneColor}` }}>
+            INVEST IN{'\n'}YOURSELF
           </p>
-          {leftBB.sub && <p className="text-lg mt-1">{leftBB.sub}</p>}
+          <p className="text-lg mt-1">📈</p>
         </motion.div>
       </div>
 
-      {/* ─── RIGHT BILLBOARD ─── */}
-      <div className="absolute" style={{ right: '1%', top: '8%', width: '18%' }}>
-        <motion.div
-          className="rounded-lg border p-3 text-right"
-          style={{
-            borderColor: `${rightBB.color}66`,
-            background: 'rgba(0,0,0,0.85)',
-            boxShadow: `0 0 30px ${rightBB.color}44`,
-          }}
-          animate={{ boxShadow: [`0 0 20px ${rightBB.color}33`, `0 0 40px ${rightBB.color}66`, `0 0 20px ${rightBB.color}33`] }}
-          transition={{ duration: 3, repeat: Infinity }}
-        >
-          <p className="font-black text-sm leading-tight whitespace-pre-line"
-            style={{ color: rightBB.color, textShadow: `0 0 16px ${rightBB.color}` }}>
-            {rightBB.text}
+      {/* ── LEFT SECONDARY BILLBOARD ── */}
+      <div className="absolute" style={{ left: '1%', top: '28%', width: '14%' }}>
+        <motion.div className="rounded border p-2"
+          style={{ borderColor: '#a855f766', background: 'rgba(0,0,0,0.8)' }}
+          animate={{ boxShadow: ['0 0 10px #a855f733', '0 0 25px #a855f766', '0 0 10px #a855f733'] }}
+          transition={{ duration: 3, repeat: Infinity }}>
+          <p className="text-[10px] font-bold leading-tight text-white/80">
+            Choices<br/>Today<br/>Reality<br/>Tomorrow
           </p>
         </motion.div>
       </div>
 
-      {/* ─── GAME TITLE BILLBOARD (top center) ─── */}
-      <div className="absolute top-[5%] left-1/2 -translate-x-1/2 z-10">
-        <motion.div
-          className="rounded-xl border-2 px-5 py-2 text-center"
-          style={{
-            borderColor: `${laneColor}88`,
-            background: 'rgba(0,0,0,0.9)',
-            boxShadow: `0 0 40px ${laneColor}55`,
-          }}
-          animate={{ boxShadow: [`0 0 20px ${laneColor}44`, `0 0 50px ${laneColor}88`, `0 0 20px ${laneColor}44`] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <p className="font-black text-base italic leading-tight"
-            style={{ color: laneColor, textShadow: `0 0 20px ${laneColor}`, fontFamily: '"Dancing Script", cursive', fontSize: 20 }}>
+      {/* ── RIGHT LARGE BILLBOARD ── */}
+      <div className="absolute" style={{ right: '1%', top: '5%', width: '17%' }}>
+        <motion.div className="rounded-lg border-2 p-3"
+          style={{ borderColor: '#22d3ee88', background: 'rgba(0,0,0,0.88)',
+            boxShadow: '0 0 40px #22d3ee44' }}
+          animate={{ boxShadow: ['0 0 20px #22d3ee33', '0 0 50px #22d3ee77', '0 0 20px #22d3ee33'] }}
+          transition={{ duration: 3, repeat: Infinity }}>
+          <p className="font-black text-sm leading-tight"
+            style={{ color: '#22d3ee', textShadow: '0 0 18px #22d3ee' }}>
+            OPPORTUNITY<br/>IS EVERYWHERE
+          </p>
+        </motion.div>
+      </div>
+
+      {/* ── RIGHT SECONDARY BILLBOARD ── */}
+      <div className="absolute" style={{ right: '1%', top: '28%', width: '14%' }}>
+        <motion.div className="rounded border p-2 text-right"
+          style={{ borderColor: '#f59e0b66', background: 'rgba(0,0,0,0.8)' }}
+          animate={{ boxShadow: ['0 0 10px #f59e0b33', '0 0 25px #f59e0b66', '0 0 10px #f59e0b33'] }}
+          transition={{ duration: 2.8, repeat: Infinity }}>
+          <p className="text-[10px] font-bold leading-tight text-right"
+            style={{ color: '#f59e0b', textShadow: '0 0 8px #f59e0b' }}>
+            LIVE YOUR<br/>DREAMS
+          </p>
+        </motion.div>
+      </div>
+
+      {/* ── GAME TITLE CENTER (top billboard) ── */}
+      <div className="absolute top-[4%] left-1/2 -translate-x-1/2 z-10">
+        <motion.div className="rounded-xl border-2 px-5 py-2 text-center"
+          style={{ borderColor: `${laneColor}99`, background: 'rgba(0,0,0,0.92)',
+            boxShadow: `0 0 50px ${laneColor}66` }}
+          animate={{ boxShadow: [`0 0 25px ${laneColor}44`, `0 0 60px ${laneColor}99`, `0 0 25px ${laneColor}44`] }}
+          transition={{ duration: 2, repeat: Infinity }}>
+          <p className="font-black italic leading-tight"
+            style={{ color: laneColor, textShadow: `0 0 24px ${laneColor}`,
+              fontFamily: '"Dancing Script", cursive', fontSize: 22 }}>
             Trippin'
           </p>
-          <p className="font-black text-[9px] tracking-widest text-white/80 uppercase">
+          <p className="font-black text-[8px] tracking-widest text-white/80 uppercase">
             Through Life With Mandy
           </p>
         </motion.div>
       </div>
 
-      {/* ─── ROAD TILES (perspective receding into horizon) ─── */}
-      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end pb-4"
-        style={{ top: '42%' }}>
+      {/* ── ROAD TILES IN PERSPECTIVE ──
+          We stack tiles bottom-to-top, each one narrower and shorter.
+          The current tile (dist=0) is the big one at bottom.
+          Tiles ahead (dist=1,2,...) shrink toward horizon center.
+      */}
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end"
+        style={{ top: '46%', paddingBottom: 16 }}>
 
-        {/* Render tiles from far (top) to near (bottom) */}
-        {[...visibleTiles].reverse().map(({ tileIndex, dist }, i) => {
+        {/* Render tiles from farthest (top) to nearest (bottom = current) */}
+        {[...visibleTiles].reverse().map(({ tileIndex, dist }) => {
           const tile = getTileById(tilesOnPath[tileIndex]);
           const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
           const Icon = styleInfo.icon;
           const isCurrent = dist === 0;
+          const { w, h } = getTileDims(dist);
+          const gap = getGap(dist);
+          const opacity = Math.max(0.25, 1 - dist * 0.16);
 
-          // Perspective sizing: current tile is large at bottom, ahead tiles shrink
-          const tileW = isCurrent ? 320 : Math.max(80, 320 - dist * 52);
-          const tileH = isCurrent ? 90 : Math.max(32, 90 - dist * 14);
-          const mb = isCurrent ? 0 : dist === 1 ? 8 : 4;
-          const opacity = Math.max(0.3, 1 - dist * 0.18);
+          // Trapezoid shape: perspective tile embedded in road
+          // Near tile is wider; far tiles are narrower
+          // We use clipPath to make a trapezoid (wider at bottom, narrower at top)
+          const trapezoidClip = `polygon(${dist * 3}% 0%, ${100 - dist * 3}% 0%, 100% 100%, 0% 100%)`;
 
           return (
             <motion.div
-              key={`tile-${tileIndex}`}
-              className="relative rounded-xl border flex items-center justify-center text-center overflow-hidden flex-shrink-0"
+              key={`rt-${tileIndex}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity }}
+              className="relative flex flex-col items-center justify-center text-center flex-shrink-0"
               style={{
-                width: tileW,
-                height: tileH,
-                marginBottom: mb,
-                opacity,
-                borderColor: isCurrent ? `${laneColor}cc` : `${laneColor}55`,
-                background: isCurrent
-                  ? `linear-gradient(180deg, rgba(20,10,45,0.98), rgba(5,2,18,0.99))`
-                  : `linear-gradient(180deg, rgba(12,6,28,0.92), rgba(3,1,12,0.96))`,
-                boxShadow: isCurrent
-                  ? `0 0 50px ${laneColor}88, 0 0 100px ${laneColor}33, inset 0 1px 0 rgba(255,255,255,0.15), 0 -4px 30px ${laneColor}44`
-                  : `0 0 10px ${laneColor}22`,
+                width: w,
+                height: h,
+                marginBottom: gap,
               }}
             >
-              {/* Neon border strips */}
-              <div className="absolute inset-x-0 top-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${laneColor}${isCurrent ? 'cc' : '44'}, transparent)` }} />
-              <div className="absolute inset-x-0 bottom-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${laneColor}${isCurrent ? '88' : '22'}, transparent)` }} />
-              {/* Corner glows */}
-              {isCurrent && <>
-                <div className="absolute top-0 left-0 w-8 h-8 rounded-br-full"
-                  style={{ background: `radial-gradient(circle at 0 0, ${laneColor}44, transparent)` }} />
-                <div className="absolute top-0 right-0 w-8 h-8 rounded-bl-full"
-                  style={{ background: `radial-gradient(circle at 100% 0, ${laneColor}44, transparent)` }} />
-              </>}
+              {/* The tile card with trapezoid perspective illusion */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden"
+                style={{
+                  clipPath: trapezoidClip,
+                  borderRadius: isCurrent ? 16 : 10,
+                  background: isCurrent
+                    ? `linear-gradient(180deg, rgba(18,8,40,0.98) 0%, rgba(6,2,16,0.99) 100%)`
+                    : `linear-gradient(180deg, rgba(12,5,28,0.94) 0%, rgba(4,1,10,0.97) 100%)`,
+                }}>
+                {/* Neon border glow — top edge */}
+                <div className="absolute inset-x-0 top-0 h-[2px]"
+                  style={{ background: `linear-gradient(90deg, transparent 5%, ${laneColor}${isCurrent ? 'ee' : '55'} 50%, transparent 95%)` }} />
+                {/* Bottom edge */}
+                <div className="absolute inset-x-0 bottom-0 h-[2px]"
+                  style={{ background: `linear-gradient(90deg, transparent 5%, ${laneColor}${isCurrent ? 'aa' : '33'} 50%, transparent 95%)` }} />
+                {/* Left edge */}
+                <div className="absolute left-0 inset-y-0 w-[2px]"
+                  style={{ background: `linear-gradient(180deg, ${laneColor}${isCurrent ? 'aa' : '33'}, ${laneColor}${isCurrent ? '55' : '11'})` }} />
+                {/* Right edge */}
+                <div className="absolute right-0 inset-y-0 w-[2px]"
+                  style={{ background: `linear-gradient(180deg, ${laneColor}${isCurrent ? 'aa' : '33'}, ${laneColor}${isCurrent ? '55' : '11'})` }} />
 
-              {/* Animated glow pulse on current */}
-              {isCurrent && (
-                <motion.div className="absolute inset-0 pointer-events-none"
-                  animate={{ opacity: [0.2, 0.5, 0.2] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  style={{ background: `radial-gradient(ellipse at 50% 0%, ${laneColor}22, transparent 70%)` }} />
-              )}
+                {/* Pulse glow for current tile */}
+                {isCurrent && (
+                  <motion.div className="absolute inset-0 pointer-events-none"
+                    animate={{ opacity: [0.15, 0.45, 0.15] }}
+                    transition={{ duration: 1.8, repeat: Infinity }}
+                    style={{ background: `radial-gradient(ellipse at 50% 50%, ${laneColor}22, transparent 70%)` }} />
+                )}
 
-              <div className="relative z-10 flex items-center gap-3 px-4">
-                {isCurrent && <Icon className="w-6 h-6 flex-shrink-0" style={{ color: laneColor, filter: `drop-shadow(0 0 8px ${laneColor})` }} />}
-                <div className="text-left">
-                  {!isCurrent && dist <= 3 && (
-                    <p className="font-black uppercase tracking-widest"
-                      style={{ fontSize: Math.max(6, 9 - dist), color: `${laneColor}99` }}>
-                      SPACE {tileIndex + 1}
+                {/* Outer neon box-shadow glow (applied via wrapper) */}
+              </div>
+
+              {/* Neon glow box around tile */}
+              <div className="absolute inset-0 rounded-xl pointer-events-none"
+                style={{
+                  boxShadow: isCurrent
+                    ? `0 0 60px ${laneColor}88, 0 0 120px ${laneColor}33, inset 0 0 30px ${laneColor}11`
+                    : `0 0 18px ${laneColor}33`,
+                  borderRadius: isCurrent ? 16 : 10,
+                  border: `2px solid ${laneColor}${isCurrent ? 'cc' : '44'}`,
+                  clipPath: trapezoidClip,
+                }} />
+
+              {/* Tile content */}
+              <div className="relative z-10 flex items-center justify-center gap-2 px-3">
+                {isCurrent && (
+                  <Icon className="flex-shrink-0"
+                    style={{ width: 22, height: 22, color: laneColor,
+                      filter: `drop-shadow(0 0 8px ${laneColor})` }} />
+                )}
+                <div className={`text-center ${isCurrent ? '' : 'min-w-0'}`}>
+                  {/* Space label */}
+                  <p className="font-black uppercase tracking-widest"
+                    style={{
+                      fontSize: isCurrent ? 10 : Math.max(6, 8 - dist),
+                      color: `${laneColor}cc`,
+                      lineHeight: 1.2,
+                    }}>
+                    SPACE {tileIndex + 1}
+                  </p>
+                  {/* Tile name */}
+                  {(isCurrent || dist <= 3) && (
+                    <p className="font-black text-white leading-tight"
+                      style={{
+                        fontSize: isCurrent ? 18 : Math.max(7, 14 - dist * 3),
+                        textShadow: isCurrent ? `0 0 20px ${laneColor}` : 'none',
+                      }}>
+                      {tile.name}
                     </p>
                   )}
-                  {(isCurrent || dist <= 2) ? (
-                    <p className={`font-black text-white leading-tight ${isCurrent ? 'text-base' : dist === 1 ? 'text-[9px]' : 'text-[7px]'}`}
-                      style={{ textShadow: isCurrent ? `0 0 16px ${laneColor}` : 'none' }}>
-                      {isCurrent ? tile.name : `${tile.name}`}
+                  {/* Emoji on current tile */}
+                  {isCurrent && tile.actionText && (
+                    <p className="text-white/50 mt-0.5" style={{ fontSize: 9 }}>
+                      {tile.actionText}
                     </p>
-                  ) : (
-                    <div className="w-2 h-2 rounded-full"
-                      style={{ background: laneColor, boxShadow: `0 0 6px ${laneColor}` }} />
                   )}
                 </div>
+                {isCurrent && (
+                  <Icon className="flex-shrink-0"
+                    style={{ width: 22, height: 22, color: laneColor, opacity: 0.6 }} />
+                )}
               </div>
             </motion.div>
           );
         })}
 
-        {/* ─── PAWN on current tile ─── */}
-        <div className="absolute" style={{ bottom: 78, left: '50%', transform: 'translateX(-50%)' }}>
-          {/* Pawn glow halo */}
-          <motion.div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full"
-            style={{ width: 80, height: 20, background: `radial-gradient(ellipse, ${laneColor}88, transparent 70%)`, filter: 'blur(4px)' }}
-            animate={{ scaleX: hopping ? [1, 0.8, 1.2, 1] : [1, 1.05, 1], opacity: hopping ? [0.8, 0.3, 0.8] : [0.6, 0.9, 0.6] }}
-            transition={{ duration: hopping ? HOP_MS / 1000 : 1.5, repeat: hopping ? 0 : Infinity }} />
-
+        {/* ── PAWN on current tile ── */}
+        <div style={{
+          position: 'absolute',
+          bottom: getTileDims(0).h + 16 - 8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+        }}>
+          {/* Pawn glow halo on road */}
+          <motion.div
+            className="absolute rounded-full"
+            style={{
+              bottom: -4, left: '50%', transform: 'translateX(-50%)',
+              width: 90, height: 22,
+              background: `radial-gradient(ellipse, ${laneColor}99, transparent 70%)`,
+              filter: 'blur(5px)',
+            }}
+            animate={{ scaleX: hopping ? [1, 0.7, 1.3, 1] : [1, 1.08, 1], opacity: hopping ? [0.9, 0.3, 0.9] : [0.6, 1, 0.6] }}
+            transition={{ duration: hopping ? HOP_MS / 1000 : 1.8, repeat: hopping ? 0 : Infinity }}
+          />
           <Pawn
             color={currentPlayer?.color ?? 'purple'}
             avatar={currentPlayer?.avatar}
@@ -497,12 +600,26 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
         </div>
       </div>
 
-      {/* ─── PLAYER INFO BADGE ─── */}
-      <div className="absolute bottom-4 right-4 z-20">
+      {/* ── RAIN EFFECT ── */}
+      {Array.from({ length: 28 }).map((_, i) => (
+        <motion.div key={`rain-${i}`}
+          className="absolute w-px rounded-full pointer-events-none"
+          style={{
+            left: `${3 + i * 3.4}%`,
+            top: 0,
+            height: 70,
+            background: 'linear-gradient(180deg, transparent, rgba(160,200,255,0.28), transparent)',
+          }}
+          animate={{ y: ['0%', '115%'], opacity: [0, 0.7, 0] }}
+          transition={{ duration: 1.1 + (i % 6) * 0.12, repeat: Infinity, delay: i * 0.06, ease: 'linear' }} />
+      ))}
+
+      {/* ── PLAYER INFO BADGE ── */}
+      <div className="absolute bottom-4 right-4 z-30">
         <div className="flex items-center gap-2 rounded-full border px-3 py-1.5"
-          style={{ borderColor: `${laneColor}55`, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-          <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black"
-            style={{ background: laneColor, boxShadow: `0 0 10px ${laneColor}` }}>
+          style={{ borderColor: `${laneColor}55`, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black"
+            style={{ background: laneColor, boxShadow: `0 0 12px ${laneColor}` }}>
             {currentPlayer?.name?.charAt(0)}
           </div>
           <span className="text-white text-xs font-bold">{currentPlayer?.name}</span>
@@ -511,28 +628,6 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
           </span>
         </div>
       </div>
-
-      {/* ─── AMBIENT RAIN EFFECT ─── */}
-      {Array.from({ length: 20 }).map((_, i) => (
-        <motion.div key={`rain-${i}`}
-          className="absolute w-px rounded-full pointer-events-none"
-          style={{
-            left: `${5 + i * 4.5}%`,
-            top: 0,
-            height: 60,
-            background: 'linear-gradient(180deg, transparent, rgba(180,210,255,0.3), transparent)',
-          }}
-          animate={{ y: ['0%', '110%'], opacity: [0, 0.6, 0] }}
-          transition={{ duration: 1.2 + (i % 5) * 0.15, repeat: Infinity, delay: i * 0.07, ease: 'linear' }} />
-      ))}
-
-      {/* ─── HORIZON GLOW ─── */}
-      <div className="absolute pointer-events-none"
-        style={{
-          top: '38%', left: '20%', right: '20%', height: 60,
-          background: `radial-gradient(ellipse at 50% 50%, ${laneColor}33, transparent 70%)`,
-          filter: 'blur(12px)',
-        }} />
     </div>
   );
 }
