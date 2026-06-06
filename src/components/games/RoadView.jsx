@@ -38,6 +38,20 @@ const CAT_BG = {
   wildcard:   'rgba(232,121,249,0.10)',
 };
 
+// District/location flavor by category
+const CAT_DISTRICT = {
+  start:      { label: '✦ THE JOURNEY BEGINS', sub: 'City Gates — Mile Zero' },
+  finish:     { label: '🏆 YOU MADE IT', sub: 'Victory Plaza — Skyline Peak' },
+  money:      { label: '💹 Financial District', sub: 'Market Row · Bank & Co.' },
+  money_loss: { label: '🧾 Reality Check Ave', sub: 'Bills & Obligations Blvd' },
+  tax:        { label: '💀 IRS Plaza', sub: 'Tax Season — Everyone Pays' },
+  heartbreak: { label: '💔 Heartbreak Hotel', sub: 'Feelings Lane · Teardrops St.' },
+  chaos:      { label: '🔥 Chaos Junction', sub: 'Wild Side · No GPS Here' },
+  blessing:   { label: '✨ Blessing Gardens', sub: 'Community Park · Good Vibes' },
+  glowup:     { label: '🌟 Glow Up District', sub: 'Self Care Ave · Level Up Ln.' },
+  wildcard:   { label: '🃏 Mandy Magic Zone', sub: 'Anything Goes · Host Rules' },
+};
+
 // ── Step-by-step pawn animation ──────────────────────────────────────────────
 function useStepAnimation(targetPos, resetKey) {
   const [displayPos, setDisplayPos] = useState(targetPos);
@@ -100,12 +114,49 @@ function PawnToken({ player, hopping, isActive }) {
   );
 }
 
+// ── District ambient overlay behind a tile ───────────────────────────────────
+function TileDistrictAmbience({ category, neon, isCurrent }) {
+  const icons = {
+    money:      ['🏦','📈','💳','🏢'],
+    money_loss: ['📬','🧾','💸','⚠️'],
+    tax:        ['💀','🏛️','📋','💰'],
+    heartbreak: ['🌹','💔','🍷','🎸'],
+    chaos:      ['⚡','🔥','🌪️','💥'],
+    blessing:   ['🌳','☕','🌸','🕊️'],
+    glowup:     ['✨','💅','📚','🌟'],
+    wildcard:   ['🃏','🎭','🌀','🎲'],
+    start:      ['🚀','🗺️','🎯','🌆'],
+    finish:     ['🏆','🥂','🎊','👑'],
+  }[category] || ['🌃'];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+      {/* Ambient district glow wash */}
+      <div className="absolute inset-0 opacity-30"
+        style={{ background: `radial-gradient(ellipse at 50% 100%, ${neon}44 0%, transparent 70%)` }}
+      />
+      {/* Floating ambient emoji icon */}
+      {isCurrent && (
+        <motion.div
+          className="absolute bottom-0.5 right-1 text-xs opacity-40 select-none pointer-events-none"
+          animate={{ y: [0, -3, 0], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ fontSize: 9 }}
+        >
+          {icons[0]}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 // ── Single board space ───────────────────────────────────────────────────────
 function BoardSpace({ tile, idx, isCurrent, isStart, isFinish, occupants, hopping, categoryStyles, tileW, tileH }) {
   const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
   const Icon = styleInfo.icon;
   const neon = CAT_NEON[tile.category] || '#60a5fa';
   const bg   = CAT_BG[tile.category]  || 'rgba(20,30,60,0.8)';
+  const district = CAT_DISTRICT[tile.category] || {};
   const label = isStart ? '★  START' : isFinish ? '🏆  FINISH' : tile.name;
 
   return (
@@ -116,48 +167,64 @@ function BoardSpace({ tile, idx, isCurrent, isStart, isFinish, occupants, hoppin
         height: tileH,
         background: isCurrent
           ? `linear-gradient(145deg, ${bg}, rgba(8,14,32,0.97))`
-          : `linear-gradient(145deg, rgba(10,18,38,0.95), rgba(4,8,18,0.98))`,
-        borderColor: isCurrent ? neon : `${neon}55`,
+          : `linear-gradient(145deg, rgba(6,10,24,0.92), rgba(3,5,14,0.96))`,
+        borderColor: isCurrent ? neon : `${neon}44`,
         boxShadow: isCurrent
-          ? `0 0 28px ${neon}99, 0 0 60px ${neon}22, inset 0 1px 0 rgba(255,255,255,0.15)`
-          : `0 0 6px ${neon}22, 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+          ? `0 0 32px ${neon}99, 0 0 80px ${neon}22, inset 0 1px 0 rgba(255,255,255,0.18)`
+          : `0 0 8px ${neon}18, 0 2px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)`,
         zIndex: isCurrent ? 10 : 1,
         flexShrink: 0,
       }}
     >
-      {/* Scanline */}
-      <div className="absolute inset-0 pointer-events-none opacity-20"
-        style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 3px)' }}
+      {/* District ambience */}
+      <TileDistrictAmbience category={tile.category} neon={neon} isCurrent={isCurrent} />
+
+      {/* Scanline texture */}
+      <div className="absolute inset-0 pointer-events-none opacity-10"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 3px)' }}
       />
 
-      {/* Top accent bar */}
-      <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl"
-        style={{ background: `linear-gradient(90deg, transparent, ${neon}, transparent)`, opacity: isCurrent ? 1 : 0.4 }}
+      {/* Wet street reflection at bottom */}
+      <div className="absolute inset-x-0 bottom-0 h-4 opacity-30"
+        style={{ background: `linear-gradient(to top, ${neon}33, transparent)` }}
       />
+
+      {/* Top neon accent bar */}
+      <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl"
+        style={{ background: `linear-gradient(90deg, transparent, ${neon}, transparent)`, opacity: isCurrent ? 1 : 0.35 }}
+      />
+
+      {/* District micro-label */}
+      {district.sub && (
+        <div className="absolute top-0.5 right-1 font-black text-white/20 leading-none"
+          style={{ fontSize: 5, letterSpacing: '0.06em' }}>
+          {district.sub?.split(' ·')[0]}
+        </div>
+      )}
 
       {/* Space number */}
-      <div className="absolute top-1 left-1.5 font-black text-white/25" style={{ fontSize: 7 }}>{idx + 1}</div>
+      <div className="absolute top-1 left-1.5 font-black text-white/20" style={{ fontSize: 6 }}>{idx + 1}</div>
 
       {/* Content */}
       <div className="flex flex-col items-center justify-center h-full px-1.5 pt-2 pb-1 gap-0.5">
         {/* Icon circle */}
         <div className="flex items-center justify-center rounded-full shrink-0"
           style={{
-            width: isStart || isFinish ? 28 : 22,
-            height: isStart || isFinish ? 28 : 22,
+            width: isStart || isFinish ? 30 : 22,
+            height: isStart || isFinish ? 30 : 22,
             background: `${neon}18`,
             border: `1.5px solid ${neon}66`,
-            boxShadow: `0 0 8px ${neon}44`,
+            boxShadow: isCurrent ? `0 0 14px ${neon}88` : `0 0 6px ${neon}33`,
             marginBottom: 1,
           }}>
-          <Icon style={{ width: isStart || isFinish ? 14 : 11, height: isStart || isFinish ? 14 : 11, color: neon }} />
+          <Icon style={{ width: isStart || isFinish ? 15 : 11, height: isStart || isFinish ? 15 : 11, color: neon }} />
         </div>
 
         {/* Title */}
         <p className="text-center font-black leading-tight w-full"
           style={{
             fontSize: isStart || isFinish ? 9 : 7.5,
-            color: isCurrent ? '#fff' : 'rgba(255,255,255,0.80)',
+            color: isCurrent ? '#fff' : 'rgba(255,255,255,0.82)',
             letterSpacing: '0.03em',
             lineHeight: 1.2,
             maxHeight: 28,
@@ -190,8 +257,8 @@ function BoardSpace({ tile, idx, isCurrent, isStart, isFinish, occupants, hoppin
       {/* Pulsing border when active */}
       {isCurrent && (
         <motion.div className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{ border: `2px solid ${neon}`, boxShadow: `0 0 20px ${neon}` }}
-          animate={{ opacity: [0.25, 1, 0.25] }}
+          style={{ border: `2px solid ${neon}`, boxShadow: `0 0 24px ${neon}` }}
+          animate={{ opacity: [0.2, 1, 0.2] }}
           transition={{ duration: 0.95, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
@@ -203,153 +270,178 @@ function BoardSpace({ tile, idx, isCurrent, isStart, isFinish, occupants, hoppin
 function Connector({ from, to, neon, turn }) {
   const dx = to.cx - from.cx;
   const dy = to.cy - from.cy;
-  const isHoriz  = Math.abs(dx) > Math.abs(dy);
-  const isTurning = turn;
-
-  // Control point for curve
   let cpx, cpy;
-  if (isTurning) {
+  if (turn) {
     cpx = from.cx + dx * 0.5;
     cpy = to.cy;
-  } else if (isHoriz) {
-    cpx = from.cx + dx * 0.5;
-    cpy = from.cy + dy * 0.5;
   } else {
     cpx = from.cx + dx * 0.5;
     cpy = from.cy + dy * 0.5;
   }
-
   const pathD = `M ${from.cx} ${from.cy} Q ${cpx} ${cpy} ${to.cx} ${to.cy}`;
 
   return (
     <g>
-      {/* Glow path */}
-      <motion.path d={pathD} fill="none" stroke={neon} strokeWidth={3} strokeLinecap="round" opacity={0}
-        animate={{ opacity: [0.18, 0.55, 0.18] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+      <motion.path d={pathD} fill="none" stroke={neon} strokeWidth={4} strokeLinecap="round" opacity={0}
+        animate={{ opacity: [0.12, 0.45, 0.12] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
       />
-      {/* Core path */}
-      <path d={pathD} fill="none" stroke={neon} strokeWidth={1.5} strokeLinecap="round" opacity={0.6}
-        strokeDasharray="5 7"
+      <path d={pathD} fill="none" stroke={neon} strokeWidth={1.5} strokeLinecap="round" opacity={0.5}
+        strokeDasharray="5 8"
       />
-      {/* Arrow tip at destination */}
-      <motion.circle cx={to.cx} cy={to.cy} r={3} fill={neon} opacity={0}
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+      <motion.circle cx={to.cx} cy={to.cy} r={3.5} fill={neon} opacity={0}
+        animate={{ opacity: [0.25, 0.9, 0.25] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
       />
     </g>
   );
 }
 
-// ── City environment background ───────────────────────────────────────────────
-function CityBackground({ neon }) {
+// ── Immersive city overlay (renders OVER the photo, under the tiles) ──────────
+function CityOverlay({ pathNeon, currentCategory }) {
+  const SIGNS = [
+    { text: 'YOU GOT THIS',   color: '#f472b6', left: '4%',  top: '8%'  },
+    { text: 'DREAM BIG',      color: '#38bdf8', left: '70%', top: '5%'  },
+    { text: 'STAY THE COURSE',color: '#c084fc', left: '38%', top: '13%' },
+    { text: 'OPEN LATE',      color: '#fb923c', left: '16%', top: '20%' },
+    { text: 'LEVEL UP',       color: '#34d399', left: '78%', top: '18%' },
+    { text: 'KEEP GOING',     color: pathNeon,  left: '52%', top: '25%' },
+    { text: 'MAIN CHARACTER', color: '#fbbf24', left: '6%',  top: '32%' },
+    { text: 'YOUR STORY',     color: '#e879f9', left: '82%', top: '30%' },
+  ];
+
+  const STOREFRONTS = [
+    { label: '☕ Grind & Go Café',        left: '2%',  bottom: '38%', color: '#fb923c' },
+    { label: '📚 City Library',            left: '22%', bottom: '52%', color: '#38bdf8' },
+    { label: '🏦 First Metro Bank',        left: '60%', bottom: '46%', color: '#34d399' },
+    { label: '🌸 Bloom Community Park',    left: '42%', bottom: '60%', color: '#c084fc' },
+    { label: '🍜 Night Market',            left: '78%', bottom: '42%', color: '#f472b6' },
+    { label: '🚇 Central Station',         left: '34%', bottom: '32%', color: '#60a5fa' },
+    { label: '💅 Glow Up Salon',           left: '14%', bottom: '62%', color: '#e879f9' },
+    { label: '🏢 Opportunity Tower',       left: '66%', bottom: '58%', color: '#fbbf24' },
+  ];
+
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Sky gradient */}
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+
+      {/* Dark atmospheric overlay so photo doesn't overpower tiles */}
       <div className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg,#030820 0%,#060d2a 35%,#090520 70%,#050210 100%)' }}
+        style={{ background: 'linear-gradient(180deg, rgba(2,4,18,0.72) 0%, rgba(4,8,22,0.55) 40%, rgba(2,5,16,0.78) 100%)' }}
       />
 
-      {/* Stars */}
-      {Array.from({ length: 40 }).map((_, i) => (
-        <motion.div key={i} className="absolute rounded-full bg-white"
-          style={{ width: 1 + (i % 2), height: 1 + (i % 2), left: `${(i * 2.5 + 1) % 100}%`, top: `${(i * 2.3 + 2) % 40}%`, opacity: 0.3 + (i % 4) * 0.1 }}
-          animate={{ opacity: [0.2, 0.8, 0.2] }}
-          transition={{ duration: 2 + (i % 5) * 0.6, repeat: Infinity, delay: i * 0.07, ease: 'easeInOut' }}
+      {/* Rain streaks */}
+      {Array.from({ length: 28 }).map((_, i) => (
+        <motion.div key={`rain-${i}`} className="absolute w-px rounded-full"
+          style={{ left: `${(i * 3.6 + 0.5) % 100}%`, top: '-4%', height: 60 + (i % 4) * 10, background: 'rgba(147,197,253,0.14)' }}
+          animate={{ y: ['0vh', '118vh'], opacity: [0, 0.5, 0] }}
+          transition={{ duration: 1.2 + (i % 6) * 0.1, repeat: Infinity, delay: i * 0.045, ease: 'linear' }}
         />
       ))}
 
-      {/* Tall buildings - back layer */}
-      {[0,1,2,3,4,5,6,7,8].map(i => (
-        <div key={`b${i}`} className="absolute bottom-0"
-          style={{
-            left: `${i * 12 - 2}%`,
-            width: `${8 + (i % 3) * 3}%`,
-            height: `${22 + (i % 5) * 12}%`,
-            background: `linear-gradient(180deg, rgba(8,14,38,0.9), rgba(2,5,14,0.98))`,
-            borderTop: `1px solid ${neon}22`,
-            borderLeft: '1px solid rgba(255,255,255,0.04)',
-          }}>
-          {/* Windows grid */}
-          <div className="absolute inset-x-1 top-2 grid gap-0.5" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-            {Array.from({ length: 15 }).map((_, w) => (
-              <div key={w} className="rounded-sm" style={{
-                height: 4,
-                background: w % 4 === 0 ? `${neon}cc` : w % 7 === 0 ? '#fef08a88' : 'rgba(255,255,255,0.04)',
-                boxShadow: w % 4 === 0 ? `0 0 6px ${neon}` : undefined,
-              }} />
-            ))}
-          </div>
-          {/* Rooftop antenna */}
-          {i % 3 === 0 && <div className="absolute -top-6 left-1/2 w-px h-6" style={{ background: `${neon}88`, boxShadow: `0 0 4px ${neon}` }} />}
-        </div>
+      {/* Wet street puddle shimmer at base */}
+      <div className="absolute inset-x-0 bottom-0 h-28"
+        style={{ background: `linear-gradient(to top, ${pathNeon}1a, rgba(56,189,248,0.06), transparent)` }}
+      />
+      {[0,1,2,3].map(i => (
+        <motion.div key={`puddle-${i}`} className="absolute rounded-full blur-md"
+          style={{ bottom: `${4 + i * 5}%`, left: `${8 + i * 22}%`, width: 80 + i * 30, height: 6, background: pathNeon, opacity: 0 }}
+          animate={{ opacity: [0, 0.22, 0] }}
+          transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 1.1, ease: 'easeInOut' }}
+        />
       ))}
 
-      {/* Neon billboard signs */}
-      {[
-        { left: '5%',  top: '12%', text: 'KEEP GOING', color: neon },
-        { left: '72%', top: '8%',  text: 'DREAM BIG',  color: '#f472b6' },
-        { left: '42%', top: '18%', text: 'NO LIMITS',  color: '#38bdf8' },
-        { left: '18%', top: '22%', text: 'OPEN LATE',  color: '#fb923c' },
-        { left: '80%', top: '25%', text: 'LEVEL UP',   color: '#c084fc' },
-      ].map((sign, i) => (
-        <motion.div key={i}
-          className="absolute rounded-lg border px-2 py-1 font-black uppercase"
+      {/* Neon motivational billboard signs */}
+      {SIGNS.map((sign, i) => (
+        <motion.div key={`sign-${i}`}
+          className="absolute rounded-lg border font-black uppercase px-2 py-0.5"
           style={{
             left: sign.left, top: sign.top,
-            fontSize: 8, letterSpacing: '0.18em',
+            fontSize: 7, letterSpacing: '0.2em',
             color: sign.color,
             borderColor: `${sign.color}55`,
-            background: 'rgba(0,0,0,0.7)',
-            boxShadow: `0 0 12px ${sign.color}44`,
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.75)',
+            boxShadow: `0 0 14px ${sign.color}44, inset 0 0 6px ${sign.color}11`,
+            backdropFilter: 'blur(6px)',
+            zIndex: 2,
           }}
-          animate={{ opacity: [0.4, 1, 0.3, 0.9, 0.4] }}
-          transition={{ duration: 3 + i * 0.7, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
+          animate={{ opacity: [0.35, 1, 0.25, 0.85, 0.35] }}
+          transition={{ duration: 3.5 + i * 0.6, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 }}
         >
           {sign.text}
         </motion.div>
       ))}
 
-      {/* Rain streaks */}
-      {Array.from({ length: 22 }).map((_, i) => (
-        <motion.div key={i} className="absolute w-px rounded-full"
-          style={{ left: `${i * 4.5}%`, top: '-5%', height: 55, background: 'rgba(148,163,184,0.16)' }}
-          animate={{ y: ['0vh', '115vh'], opacity: [0, 0.4, 0] }}
-          transition={{ duration: 1.4 + (i % 5) * 0.13, repeat: Infinity, delay: i * 0.07, ease: 'linear' }}
-        />
-      ))}
-
-      {/* Wet street puddle reflections */}
-      <div className="absolute inset-x-0 bottom-0 h-32"
-        style={{ background: `linear-gradient(to top, ${neon}12, rgba(56,189,248,0.06), transparent)` }}
-      />
-      {[0,1,2].map(i => (
-        <motion.div key={i} className="absolute bottom-4 h-2 rounded-full blur-sm"
-          style={{ left: `${15 + i * 28}%`, width: `${60 + i * 20}px`, background: neon, opacity: 0 }}
-          animate={{ opacity: [0, 0.3, 0] }}
-          transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, delay: i * 0.8, ease: 'easeInOut' }}
-        />
-      ))}
-
-      {/* Moving cars */}
-      {[0,1].map(i => (
-        <motion.div key={i} className="absolute h-5 w-12 rounded-lg border border-white/10 bg-slate-900/80"
-          style={{ top: `${75 + i * 8}%`, left: i === 0 ? '-8%' : '108%' }}
-          animate={{ x: i === 0 ? ['0vw', '130vw'] : ['0vw', '-130vw'], opacity: [0, 0.9, 0] }}
-          transition={{ duration: 12 + i * 3, repeat: Infinity, delay: i * 4, ease: 'linear' }}
+      {/* City storefront + district labels */}
+      {STOREFRONTS.map((s, i) => (
+        <motion.div key={`store-${i}`}
+          className="absolute rounded-md border font-bold px-1.5 py-0.5"
+          style={{
+            left: s.left, bottom: s.bottom,
+            fontSize: 6.5, letterSpacing: '0.08em',
+            color: s.color,
+            borderColor: `${s.color}44`,
+            background: 'rgba(0,0,0,0.68)',
+            boxShadow: `0 0 8px ${s.color}33`,
+            backdropFilter: 'blur(4px)',
+            zIndex: 2,
+          }}
+          animate={{ opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 4 + i * 0.4, repeat: Infinity, ease: 'easeInOut', delay: i * 0.6 }}
         >
-          <span className="absolute left-1 top-1 h-1 w-5 rounded-full bg-amber-200/80" />
-          <span className="absolute right-1 bottom-1 h-1 w-2 rounded-full bg-red-400/80" />
+          {s.label}
         </motion.div>
       ))}
 
-      {/* Steam vents */}
-      {[0,1].map(i => (
-        <motion.div key={i} className="absolute rounded-full blur-xl"
-          style={{ width: 48, height: 48, left: i === 0 ? '22%' : '70%', bottom: '18%', background: 'rgba(255,255,255,0.06)' }}
-          animate={{ y: [0, -60], opacity: [0, 0.3, 0], scale: [0.8, 1.5] }}
-          transition={{ duration: 5 + i, repeat: Infinity, delay: i * 2.2, ease: 'easeOut' }}
+      {/* Moving cars (left-to-right & right-to-left) */}
+      {[0,1,2].map(i => (
+        <motion.div key={`car-${i}`}
+          className="absolute rounded-lg border border-white/10 bg-slate-900/80"
+          style={{ width: 44, height: 18, top: `${68 + i * 7}%`, left: i % 2 === 0 ? '-6%' : '108%' }}
+          animate={{ x: i % 2 === 0 ? ['0vw','130vw'] : ['0vw','-130vw'], opacity: [0, 0.85, 0] }}
+          transition={{ duration: 10 + i * 2.5, repeat: Infinity, delay: i * 3.5, ease: 'linear' }}
+        >
+          <span className="absolute left-1 top-0.5 h-1 w-4 rounded-full bg-amber-200/80" />
+          <span className="absolute right-1 bottom-0.5 h-1 w-2 rounded-full bg-red-400/80" />
+        </motion.div>
+      ))}
+
+      {/* Steam vents from manholes */}
+      {[0,1,2].map(i => (
+        <motion.div key={`steam-${i}`}
+          className="absolute rounded-full blur-xl"
+          style={{ width: 40, height: 40, left: `${16 + i * 30}%`, bottom: `${12 + i * 4}%`, background: 'rgba(200,210,255,0.07)' }}
+          animate={{ y: [0, -80], opacity: [0, 0.4, 0], scale: [0.8, 1.8] }}
+          transition={{ duration: 5 + i * 0.7, repeat: Infinity, delay: i * 2, ease: 'easeOut' }}
+        />
+      ))}
+
+      {/* Skyline glow at top */}
+      <div className="absolute inset-x-0 top-0 h-40"
+        style={{ background: `radial-gradient(ellipse at 50% 0%, ${pathNeon}18 0%, transparent 65%)` }}
+      />
+
+      {/* Active category district pulse */}
+      {currentCategory && (
+        <motion.div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none"
+          style={{ background: `linear-gradient(to top, ${CAT_NEON[currentCategory] || pathNeon}22, transparent)` }}
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* Floating sparkles */}
+      {Array.from({ length: 18 }).map((_, i) => (
+        <motion.div key={`spark-${i}`}
+          className="absolute rounded-full"
+          style={{
+            width: 1.5 + (i % 2),
+            height: 1.5 + (i % 2),
+            left: `${(i * 5.5 + 2) % 100}%`,
+            top: `${(i * 4.7 + 5) % 70}%`,
+            background: ['#f472b6','#c084fc','#38bdf8','#34d399','#fbbf24'][i % 5],
+          }}
+          animate={{ y: [0, -24, 0], opacity: [0.1, 0.6, 0.1], scale: [1, 1.4, 1] }}
+          transition={{ duration: 4 + i * 0.45, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
         />
       ))}
     </div>
@@ -357,11 +449,10 @@ function CityBackground({ neon }) {
 }
 
 // ── Layout engine: snake/winding path ────────────────────────────────────────
-// Returns array of {col, row} grid positions, snaking left-right bottom-to-top
 function buildSnakePath(count, cols) {
   const positions = [];
   let row = 0, col = 0;
-  const dir = [1, -1]; // alternates each row
+  const dir = [1, -1];
   let d = 0;
   for (let i = 0; i < count; i++) {
     positions.push({ col, row });
@@ -395,28 +486,28 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   );
   const safePos = Math.max(0, Math.min(displayPos, tilesOnPath.length - 1));
 
-  // Grid layout constants — fits nicely on mobile/tablet
+  const currentTile = getTileById(tilesOnPath[safePos] ?? 0);
+  const currentCategory = currentTile?.category;
+  const currentDistrict = CAT_DISTRICT[currentCategory] || {};
+
+  // Grid layout constants
   const COLS    = 3;
   const TILE_W  = 108;
   const TILE_H  = 90;
   const GAP_X   = 14;
   const GAP_Y   = 14;
 
-  // Snake grid positions (bottom-to-top visual = we'll flip via transform)
   const gridPositions = useMemo(() => buildSnakePath(tilesOnPath.length, COLS), [tilesOnPath.length]);
 
-  // Total grid size
   const rowCount  = gridPositions.length > 0 ? Math.max(...gridPositions.map(p => p.row)) + 1 : 1;
   const boardW    = COLS * TILE_W + (COLS - 1) * GAP_X + 32;
   const boardH    = rowCount * TILE_H + (rowCount - 1) * GAP_Y + 80;
 
-  // Tile center positions for connectors
   const tileCenters = useMemo(() => gridPositions.map(({ col, row }) => ({
     cx: 16 + col * (TILE_W + GAP_X) + TILE_W / 2,
     cy: boardH - 40 - row * (TILE_H + GAP_Y) - TILE_H / 2,
   })), [gridPositions, boardH]);
 
-  // Occupant map
   const occupantMap = useMemo(() => {
     const map = {};
     for (const p of players) {
@@ -429,7 +520,6 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
     return map;
   }, [players, activePathIdx, currentPlayer.id, safePos, tilesOnPath.length]);
 
-  // Auto-scroll active tile into view
   useEffect(() => {
     if (activeTileRef.current && boardRef.current) {
       activeTileRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
@@ -443,27 +533,44 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden">
 
+      {/* City overlay — environmental storytelling layer */}
+      <CityOverlay pathNeon={pathNeon} currentCategory={currentCategory} />
+
       {/* ── Header ── */}
-      <div className="relative z-10 flex items-center justify-between px-3 py-2 shrink-0"
-        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${pathNeon}30` }}>
+      <div className="relative z-20 flex items-center justify-between px-3 py-2 shrink-0"
+        style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${pathNeon}30` }}>
         <div className="flex items-center gap-2">
           <span className="text-lg">{pathEmoji}</span>
           <div>
-            <p className="font-black uppercase" style={{ fontSize: 7, letterSpacing: '0.2em', color: pathNeon }}>Your Path</p>
+            <p className="font-black uppercase" style={{ fontSize: 6.5, letterSpacing: '0.22em', color: pathNeon }}>Your Path</p>
             <p className="font-black text-white" style={{ fontSize: 12, lineHeight: 1.2 }}>{pathName}</p>
           </div>
         </div>
+
+        {/* Current district badge */}
+        {currentDistrict.label && (
+          <motion.div
+            className="flex flex-col items-center px-2 py-1 rounded-lg border"
+            style={{ borderColor: `${CAT_NEON[currentCategory]}55`, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <p className="font-black text-white" style={{ fontSize: 7.5, color: CAT_NEON[currentCategory] }}>{currentDistrict.label}</p>
+            {currentDistrict.sub && <p className="text-white/40 font-bold" style={{ fontSize: 6 }}>{currentDistrict.sub}</p>}
+          </motion.div>
+        )}
+
         <div className="flex flex-col items-end gap-1">
-          <p className="font-black uppercase text-white/35" style={{ fontSize: 7, letterSpacing: '0.16em' }}>Progress</p>
+          <p className="font-black uppercase text-white/30" style={{ fontSize: 6.5, letterSpacing: '0.16em' }}>Journey</p>
           <div className="flex items-center gap-1.5">
-            <div className="rounded-full overflow-hidden" style={{ width: 80, height: 6, background: 'rgba(255,255,255,0.07)' }}>
+            <div className="rounded-full overflow-hidden" style={{ width: 72, height: 5, background: 'rgba(255,255,255,0.07)' }}>
               <motion.div className="h-full rounded-full"
-                style={{ background: pathNeon, boxShadow: `0 0 6px ${pathNeon}` }}
+                style={{ background: pathNeon, boxShadow: `0 0 8px ${pathNeon}` }}
                 animate={{ width: `${progressPct}%` }}
                 transition={{ duration: 0.45, ease: 'easeOut' }}
               />
             </div>
-            <span className="font-black text-white/50" style={{ fontSize: 9 }}>{progressPct}%</span>
+            <span className="font-black text-white/50" style={{ fontSize: 8 }}>{progressPct}%</span>
           </div>
         </div>
       </div>
@@ -473,10 +580,10 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
         className="relative z-10 flex-1 overflow-auto flex items-start justify-center"
         style={{ scrollbarWidth: 'none', padding: '16px 8px 80px' }}>
 
-        {/* SVG connectors layer */}
+        {/* SVG connectors — the city streets connecting spaces */}
         <svg
           className="absolute pointer-events-none"
-          style={{ left: '50%', top: 16, transform: 'translateX(-50%)', zIndex: 2, overflow: 'visible' }}
+          style={{ left: '50%', top: 16, transform: 'translateX(-50%)', zIndex: 3, overflow: 'visible' }}
           width={boardW} height={boardH}
         >
           {tileCenters.map((from, i) => {
@@ -484,14 +591,12 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
             const to = tileCenters[i + 1];
             const isTurn = gridPositions[i].row !== gridPositions[i + 1].row;
             const neon = CAT_NEON[getTileById(tilesOnPath[i]).category] || pathNeon;
-            return (
-              <Connector key={i} from={from} to={to} neon={neon} turn={isTurn} />
-            );
+            return <Connector key={i} from={from} to={to} neon={neon} turn={isTurn} />;
           })}
         </svg>
 
         {/* Tiles */}
-        <div className="relative" style={{ width: boardW, height: boardH, flexShrink: 0 }}>
+        <div className="relative" style={{ width: boardW, height: boardH, flexShrink: 0, zIndex: 4 }}>
           {tilesOnPath.map((tileId, idx) => {
             const { col, row } = gridPositions[idx] || { col: 0, row: 0 };
             const tileX = 16 + col * (TILE_W + GAP_X);
@@ -533,20 +638,20 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
       </div>
 
       {/* ── Player status bar ── */}
-      <div className="relative z-10 px-4 py-2.5 shrink-0"
-        style={{ borderTop: `1px solid ${pathNeon}30`, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(16px)' }}>
+      <div className="relative z-20 px-4 py-2.5 shrink-0"
+        style={{ borderTop: `1px solid ${pathNeon}30`, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(20px)' }}>
         <div className="flex items-center gap-3">
           <PawnToken player={currentPlayer} hopping={false} isActive={true} />
           <div className="flex-1 min-w-0">
             <p className="font-black text-white truncate" style={{ fontSize: 12 }}>{currentPlayer.name}</p>
             <p className="font-bold" style={{ fontSize: 10, color: (currentPlayer.money ?? 0) < 0 ? '#f87171' : '#34d399' }}>
               ${currentPlayer.money?.toLocaleString?.() ?? currentPlayer.money ?? 0}
-              {currentPlayer.job && <span className="text-white/40 font-normal ml-2">{currentPlayer.job.emoji} {currentPlayer.job.name}</span>}
+              {currentPlayer.job && <span className="text-white/35 font-normal ml-2">{currentPlayer.job.emoji} {currentPlayer.job.name}</span>}
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="uppercase text-white/30" style={{ fontSize: 7, letterSpacing: '0.15em' }}>Space</p>
-            <p className="font-black" style={{ fontSize: 15, color: pathNeon }}>{safePos + 1}<span className="text-white/30 font-normal" style={{ fontSize: 10 }}>/{tilesOnPath.length}</span></p>
+            <p className="uppercase text-white/25" style={{ fontSize: 6.5, letterSpacing: '0.15em' }}>Space</p>
+            <p className="font-black" style={{ fontSize: 15, color: pathNeon }}>{safePos + 1}<span className="text-white/25 font-normal" style={{ fontSize: 10 }}>/{tilesOnPath.length}</span></p>
           </div>
         </div>
       </div>
