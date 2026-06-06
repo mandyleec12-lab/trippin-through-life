@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const HOP_MS = 440;
 
 const PAWN_HEX = {
@@ -23,48 +22,27 @@ const CAT_EMOJI = {
   glowup: '🌟', wildcard: '🃏',
 };
 
-// Life district themes — the path winds through these
-const DISTRICTS = [
-  { name: 'Hustle District',    color: '#a855f7', emoji: '💼', categories: ['start', 'money', 'glowup'] },
-  { name: 'Heartbreak Ave',     color: '#f472b6', emoji: '💔', categories: ['heartbreak', 'chaos'] },
-  { name: 'Finance Row',        color: '#34d399', emoji: '💵', categories: ['money', 'money_loss', 'tax'] },
-  { name: 'Glow Up Plaza',      color: '#c084fc', emoji: '✨', categories: ['glowup', 'blessing', 'wildcard'] },
-  { name: 'Chaos Corner',       color: '#fb923c', emoji: '🔥', categories: ['chaos', 'tax'] },
-  { name: 'Mandy Magic Lane',   color: '#e879f9', emoji: '🌟', categories: ['blessing', 'wildcard', 'finish'] },
+// The street image tile slots — measured as % of image dimensions.
+// These map to the visible tile panels in the reference images,
+// receding from bottom (nearest/largest) to top (farthest/smallest).
+// Each slot: { cx, cy, w, h } — center x%, center y%, width%, height%
+// Tuned to match the perspective tiles visible in the reference photos.
+const TILE_SLOTS = [
+  { cx: 50, cy: 87, w: 44, h: 12 },   // slot 0 — nearest (current)
+  { cx: 50, cy: 74, w: 35, h:  9.5 }, // slot 1
+  { cx: 50, cy: 63, w: 28, h:  7.5 }, // slot 2
+  { cx: 50, cy: 54, w: 22, h:  6 },   // slot 3
+  { cx: 50, cy: 46, w: 17, h:  5 },   // slot 4
+  { cx: 50, cy: 40, w: 13, h:  4 },   // slot 5 — farthest visible
 ];
 
-function getDistrict(category) {
-  return DISTRICTS.find(d => d.categories.includes(category)) ?? DISTRICTS[0];
-}
+// Pawn sits on slot 0 (current tile)
+// When player moves, pawn animates to new slot position
 
-// ─── Winding path layout — isometric grid coords ─────────────────────────────
-// Returns array of {col, row} for up to 30 tiles in an S-curve winding path
-function buildPathLayout(tileCount) {
-  const layout = [];
-  // Winding snake path: right → up → left → up → right → up...
-  const COLS = 7;
-  let col = 0, row = 0, dir = 1;
-  for (let i = 0; i < tileCount; i++) {
-    layout.push({ col, row });
-    if (i < tileCount - 1) {
-      const nextCol = col + dir;
-      if (nextCol >= COLS || nextCol < 0) {
-        row++;
-        dir *= -1;
-      } else {
-        col = nextCol;
-      }
-    }
-  }
-  return layout;
-}
-
-// ─── Step animation ───────────────────────────────────────────────────────────
 function useStepAnimation(targetPos, resetKey) {
   const [displayPos, setDisplayPos] = useState(targetPos);
   const [hopping, setHopping] = useState(false);
   const lastKey = useRef(resetKey);
-
   useEffect(() => {
     if (lastKey.current !== resetKey) {
       lastKey.current = resetKey;
@@ -72,7 +50,6 @@ function useStepAnimation(targetPos, resetKey) {
       setHopping(false);
     }
   }, [resetKey, targetPos]);
-
   useEffect(() => {
     if (displayPos === targetPos) { setHopping(false); return; }
     setHopping(true);
@@ -80,348 +57,201 @@ function useStepAnimation(targetPos, resetKey) {
     const t2 = setTimeout(() => setDisplayPos(p => p + (targetPos > p ? 1 : -1)), HOP_MS);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [displayPos, targetPos]);
-
   return { displayPos, hopping };
 }
 
-// ─── City Background ──────────────────────────────────────────────────────────
-function CityBg({ accent }) {
+// Animated neon rain overlay
+function RainOverlay() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Deep night sky gradient */}
-      <div className="absolute inset-0" style={{
-        background: 'linear-gradient(180deg, #020510 0%, #060d28 35%, #04091a 65%, #010208 100%)'
-      }} />
-
-      {/* Stars */}
-      {Array.from({ length: 60 }).map((_, i) => (
-        <motion.div key={i} className="absolute rounded-full bg-white"
-          style={{ width: 1 + (i % 3 === 0 ? 1 : 0), height: 1 + (i % 3 === 0 ? 1 : 0), left: `${(i * 1.66) % 100}%`, top: `${(i * 1.33) % 45}%`, opacity: 0.15 + (i % 5) * 0.08 }}
-          animate={{ opacity: [0.08, 0.6, 0.08] }}
-          transition={{ duration: 2 + (i % 6) * 0.6, repeat: Infinity, delay: i * 0.07 }}
-        />
-      ))}
-
-      {/* City skyline silhouette */}
-      <svg className="absolute bottom-0 w-full" viewBox="0 0 800 320" preserveAspectRatio="none" style={{ opacity: 0.85 }}>
-        {/* Building shapes */}
-        {[
-          { x: 0, w: 80, h: 160 }, { x: 75, w: 50, h: 220 }, { x: 120, w: 70, h: 140 },
-          { x: 185, w: 45, h: 190 }, { x: 225, w: 60, h: 170 }, { x: 280, w: 90, h: 130 },
-          { x: 365, w: 55, h: 200 }, { x: 415, w: 75, h: 150 }, { x: 485, w: 50, h: 210 },
-          { x: 530, w: 80, h: 180 }, { x: 605, w: 45, h: 160 }, { x: 645, w: 70, h: 240 },
-          { x: 710, w: 55, h: 130 }, { x: 760, w: 40, h: 190 },
-        ].map(({ x, w, h }, i) => (
-          <g key={i}>
-            <rect x={x} y={320 - h} width={w} height={h}
-              fill={i % 4 === 0 ? '#08101e' : i % 3 === 0 ? '#060d18' : '#04080f'} />
-            {/* Windows */}
-            {Array.from({ length: Math.floor(h / 22) }).map((_, wr) =>
-              Array.from({ length: Math.floor(w / 18) }).map((_, wc) => {
-                const on = Math.random() > 0.45;
-                const wCol = i % 3 === 0 ? accent : i % 5 === 0 ? '#f472b6' : '#fef08a';
-                return on ? (
-                  <rect key={`${wr}-${wc}`}
-                    x={x + 4 + wc * 16} y={320 - h + 8 + wr * 20}
-                    width={8} height={11}
-                    fill={wCol} opacity={0.4 + Math.random() * 0.5}
-                    style={{ filter: `drop-shadow(0 0 4px ${wCol})` }}
-                  />
-                ) : null;
-              })
-            )}
-            {/* Rooftop antenna glow */}
-            {i % 5 === 0 && (
-              <motion.rect x={x + w / 2 - 1} y={320 - h - 12} width={2} height={12}
-                fill={accent} opacity={0.8}
-                animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ duration: 1.2 + i * 0.2, repeat: Infinity }}
-              />
-            )}
-          </g>
-        ))}
-      </svg>
-
-      {/* Rain streaks */}
-      {Array.from({ length: 30 }).map((_, i) => (
-        <motion.div key={i} className="absolute w-px rounded-full"
-          style={{ left: `${(i * 3.4) % 100}%`, top: '-4%', height: 40 + (i % 5) * 10, background: `rgba(147,197,253,0.12)` }}
-          animate={{ y: ['0vh', '110vh'], opacity: [0, 0.5, 0] }}
-          transition={{ duration: 1.1 + (i % 6) * 0.09, repeat: Infinity, delay: i * 0.04, ease: 'linear' }}
-        />
-      ))}
-
-      {/* Ground wet reflection wash */}
-      <div className="absolute bottom-0 inset-x-0 h-32" style={{
-        background: `linear-gradient(to top, ${accent}18, rgba(56,189,248,0.04), transparent)`
-      }} />
-
-      {/* Moving cars in distance */}
-      {[{ left: '8%', top: '62%', dir: 1 }, { left: '88%', top: '65%', dir: -1 }].map((car, i) => (
-        <motion.div key={i} className="absolute rounded"
-          style={{ width: 28, height: 10, background: '#111827', border: '1px solid rgba(255,255,255,0.1)', top: car.top }}
-          animate={{ x: car.dir > 0 ? ['-20vw', '120vw'] : ['120vw', '-20vw'], opacity: [0, 0.7, 0.7, 0] }}
-          transition={{ duration: 10 + i * 3, repeat: Infinity, delay: i * 4 }}
-        >
-          <span className="absolute top-0.5 left-1 w-3 h-1 rounded-full bg-amber-200/80" />
-          <span className="absolute top-0.5 right-1 w-2 h-1 rounded-full bg-red-400/70" />
-        </motion.div>
-      ))}
-
-      {/* Steam vents */}
-      {[22, 55, 78].map((left, i) => (
-        <motion.div key={i} className="absolute rounded-full blur-xl"
-          style={{ width: 24, height: 24, left: `${left}%`, bottom: '20%', background: 'rgba(200,210,255,0.06)' }}
-          animate={{ y: [0, -80], opacity: [0, 0.3, 0], scale: [0.8, 2.5] }}
-          transition={{ duration: 5 + i, repeat: Infinity, delay: i * 2.2 }}
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 4 }}>
+      {Array.from({ length: 28 }).map((_, i) => (
+        <motion.div key={i}
+          className="absolute w-px rounded-full"
+          style={{
+            left: `${(i * 3.6 + 1) % 100}%`,
+            top: '-4%',
+            height: 35 + (i % 5) * 10,
+            background: 'rgba(147,197,253,0.12)',
+          }}
+          animate={{ y: ['0vh', '110vh'], opacity: [0, 0.45, 0] }}
+          transition={{ duration: 1.0 + (i % 6) * 0.1, repeat: Infinity, delay: i * 0.045, ease: 'linear' }}
         />
       ))}
     </div>
   );
 }
 
-// ─── Single board tile ────────────────────────────────────────────────────────
-function BoardTile({ tile, tileIdx, layout, isCurrent, isPast, isAdjacent, tileSize, pathNeon, categoryStyles, players, activePathIdx }) {
-  const { col, row } = layout;
-  const neon = CAT_COLOR[tile.category] || pathNeon;
-  const emoji = CAT_EMOJI[tile.category] || '';
-  const district = getDistrict(tile.category);
-  const styleInfo = categoryStyles?.[tile.category] ?? categoryStyles?.start;
-  const Icon = styleInfo?.icon;
-
-  // Isometric transform: col → right-down, row → left-down
-  // We use a skewed grid so it reads as "3D-ish" but stays fully legible
-  const ISO_X_STEP = tileSize * 1.08;
-  const ISO_Y_STEP = tileSize * 0.62;
-  const x = col * ISO_X_STEP;
-  const y = row * ISO_Y_STEP;
-
-  const occupants = players.filter(p => (p.pathIndex ?? 0) === activePathIdx && p.position === tileIdx);
-
-  const baseBg = isPast
-    ? 'rgba(8,12,24,0.88)'
-    : isCurrent
-    ? `rgba(12,18,42,0.97)`
-    : 'rgba(6,10,20,0.92)';
-
-  const borderOpacity = isCurrent ? 'ff' : isPast ? '44' : isAdjacent ? 'cc' : '77';
-  const glowIntensity = isCurrent ? '99' : isAdjacent ? '44' : '22';
+// Animated neon glow pulse on a tile overlay
+function TileGlow({ slot, color, active, containerW, containerH }) {
+  const left = `${slot.cx - slot.w / 2}%`;
+  const top  = `${slot.cy - slot.h / 2}%`;
+  const width  = `${slot.w}%`;
+  const height = `${slot.h}%`;
 
   return (
     <motion.div
-      className="absolute flex flex-col items-center justify-center overflow-hidden select-none"
+      className="absolute rounded-xl pointer-events-none"
       style={{
-        left: x, top: y,
-        width: tileSize, height: tileSize * 0.68,
-        borderRadius: 10,
-        border: `${isCurrent ? 2.5 : 1.5}px solid ${neon}${borderOpacity}`,
-        background: baseBg,
-        boxShadow: isCurrent
-          ? `0 0 28px ${neon}88, 0 0 60px ${neon}33, inset 0 0 20px ${neon}1a`
-          : isAdjacent
-          ? `0 0 12px ${neon}44, inset 0 0 8px ${neon}0d`
-          : `0 0 6px ${neon}22`,
-        opacity: isPast ? 0.55 : 1,
-        zIndex: isCurrent ? 20 : isAdjacent ? 15 : 10,
-        cursor: 'default',
+        left, top, width, height,
+        border: `${active ? 3 : 1.5}px solid ${color}`,
+        boxShadow: active
+          ? `0 0 30px ${color}cc, 0 0 60px ${color}66, inset 0 0 20px ${color}22`
+          : `0 0 10px ${color}55, inset 0 0 6px ${color}11`,
+        zIndex: 8,
       }}
-      animate={isCurrent ? { scale: [1, 1.02, 1] } : { scale: 1 }}
-      transition={isCurrent ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-      initial={{ opacity: 0, scale: 0.9 }}
-      whileInView={{ opacity: isPast ? 0.55 : 1, scale: 1 }}
+      animate={active
+        ? { opacity: [0.7, 1, 0.7], boxShadow: [`0 0 24px ${color}aa, inset 0 0 14px ${color}1a`, `0 0 48px ${color}ee, inset 0 0 28px ${color}33`, `0 0 24px ${color}aa, inset 0 0 14px ${color}1a`] }
+        : { opacity: [0.3, 0.6, 0.3] }
+      }
+      transition={{ duration: active ? 0.9 : 2, repeat: Infinity, ease: 'easeInOut' }}
+    />
+  );
+}
+
+// Tile label overlay — text that appears on top of the image tiles
+function TileLabel({ slot, tile, spaceNum, active, pathNeon, categoryStyles }) {
+  const neon = CAT_COLOR[tile?.category] || pathNeon;
+  const emoji = CAT_EMOJI[tile?.category] || '';
+  const styleInfo = categoryStyles?.[tile?.category] ?? categoryStyles?.start;
+  const Icon = styleInfo?.icon;
+
+  // Scale font with tile size
+  const fs = active ? 12 : Math.max(6, 12 * (slot.w / TILE_SLOTS[0].w));
+  const subFs = active ? 9 : Math.max(5, 8 * (slot.w / TILE_SLOTS[0].w));
+  const iconSz = active ? 18 : Math.max(10, 18 * (slot.w / TILE_SLOTS[0].w));
+
+  return (
+    <div
+      className="absolute pointer-events-none flex flex-col items-center justify-center"
+      style={{
+        left: `${slot.cx - slot.w / 2}%`,
+        top:  `${slot.cy - slot.h / 2}%`,
+        width:  `${slot.w}%`,
+        height: `${slot.h}%`,
+        zIndex: 10,
+      }}
     >
-      {/* Top neon line */}
-      <div className="absolute inset-x-0 top-0 rounded-t-lg" style={{
-        height: isCurrent ? 3 : 2,
-        background: `linear-gradient(90deg, transparent, ${neon}, transparent)`,
-        opacity: isCurrent ? 1 : 0.6,
-      }} />
-
-      {/* Scanline texture */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.013) 3px,rgba(255,255,255,0.013) 4px)',
-        opacity: 0.6,
-      }} />
-
-      {/* Bottom glow fill */}
-      <div className="absolute inset-x-0 bottom-0" style={{
-        height: '40%',
-        background: `linear-gradient(to top, ${neon}22, transparent)`,
-      }} />
-
-      {/* Tile content */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full px-1.5 py-1 gap-0.5">
-        {/* Space number */}
-        <p className="font-black uppercase text-white/30" style={{ fontSize: Math.max(5, tileSize * 0.07), letterSpacing: '0.15em' }}>
-          {tileIdx === 0 ? 'START' : tileIdx === -1 ? 'END' : `#${tileIdx + 1}`}
-        </p>
-
-        {/* Icon + name row */}
-        <div className="flex items-center gap-1 w-full justify-center">
-          {Icon && (
-            <div style={{
-              width: Math.max(12, tileSize * 0.16), height: Math.max(12, tileSize * 0.16),
-              borderRadius: 5, background: `${neon}1a`, border: `1px solid ${neon}44`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              boxShadow: isCurrent ? `0 0 10px ${neon}66` : undefined,
-            }}>
-              <Icon style={{ width: '60%', height: '60%', color: neon }} />
-            </div>
-          )}
-          <p className="font-black text-white leading-tight text-center"
-            style={{
-              fontSize: Math.max(6, tileSize * 0.1),
-              textShadow: isCurrent ? `0 0 10px ${neon}` : undefined,
-              maxWidth: tileSize * 0.65,
-            }}>
-            {tile.name}
-          </p>
-          <span style={{ fontSize: Math.max(8, tileSize * 0.14), flexShrink: 0 }}>{emoji}</span>
-        </div>
-
-        {/* Money badge */}
-        {(tile.effect === 'money_gain' || tile.effect === 'money_loss') && tile.effectValue && (
-          <p className="font-black rounded-full px-1.5"
-            style={{
-              fontSize: Math.max(6, tileSize * 0.09),
-              color: tile.effect === 'money_gain' ? '#34d399' : '#f87171',
-              background: tile.effect === 'money_gain' ? 'rgba(52,211,153,0.14)' : 'rgba(248,113,113,0.14)',
-              textShadow: tile.effect === 'money_gain' ? '0 0 8px #34d399' : '0 0 8px #f87171',
-            }}>
-            {tile.effect === 'money_gain' ? '+' : '-'}${Math.abs(tile.effectValue)}
-          </p>
+      <p style={{ fontSize: subFs, fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.16em', textTransform: 'uppercase', lineHeight: 1 }}>
+        {spaceNum === 1 ? 'THE START' : `SPACE ${spaceNum}`}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+        {Icon && active && (
+          <div style={{ width: iconSz, height: iconSz, borderRadius: 5, background: `${neon}22`, border: `1px solid ${neon}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon style={{ width: '65%', height: '65%', color: neon }} />
+          </div>
         )}
-        {tile.effect === 'tax' && <p className="font-black" style={{ fontSize: Math.max(5, tileSize * 0.08), color: '#ef4444' }}>💀 ALL TAXED</p>}
+        <p style={{
+          fontSize: fs, fontWeight: 900, color: active ? '#fff' : 'rgba(255,255,255,0.82)',
+          textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.15, textAlign: 'center',
+          textShadow: `0 0 12px ${neon}, 0 0 24px ${neon}88`,
+        }}>
+          {tile?.name}
+        </p>
+        {emoji && <span style={{ fontSize: Math.max(9, iconSz * 0.9), opacity: 0.85, flexShrink: 0 }}>{emoji}</span>}
       </div>
-
-      {/* Player pawns sitting on this tile */}
-      {occupants.length > 0 && (
-        <div className="absolute bottom-0.5 right-0.5 flex gap-0.5">
-          {occupants.map(p => {
-            const ph = PAWN_HEX[p.color] || '#a855f7';
-            return (
-              <motion.div key={p.id}
-                className="rounded-full border border-white/60 flex items-center justify-center font-black text-white overflow-hidden"
-                style={{ width: Math.max(14, tileSize * 0.18), height: Math.max(14, tileSize * 0.18), fontSize: Math.max(6, tileSize * 0.09), background: `radial-gradient(circle at 35% 30%, ${ph}ff, ${ph}99)`, boxShadow: `0 0 10px ${ph}cc` }}
-                animate={isCurrent ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                transition={{ duration: 1, repeat: isCurrent ? Infinity : 0 }}
-              >
-                {p.avatar ? <img src={p.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : p.name.charAt(0)}
-              </motion.div>
-            );
-          })}
-        </div>
+      {active && (tile?.effect === 'money_gain' || tile?.effect === 'money_loss') && tile?.effectValue && (
+        <p style={{ fontSize: subFs + 1, fontWeight: 900, marginTop: 2, color: tile.effect === 'money_gain' ? '#34d399' : '#f87171', textShadow: tile.effect === 'money_gain' ? '0 0 8px #34d399' : '0 0 8px #f87171' }}>
+          {tile.effect === 'money_gain' ? '+' : '-'}${Math.abs(tile.effectValue)}
+        </p>
       )}
-
-      {/* "Current" pulse ring */}
-      {isCurrent && (
-        <motion.div className="absolute inset-0 rounded-lg pointer-events-none"
-          style={{ border: `2px solid ${neon}`, boxShadow: `0 0 20px ${neon}88` }}
-          animate={{ opacity: [0.2, 1, 0.2] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
-        />
-      )}
-
-      {/* Past checkmark */}
-      {isPast && (
-        <div className="absolute top-1 right-1 rounded-full flex items-center justify-center"
-          style={{ width: 12, height: 12, background: `${neon}33`, border: `1px solid ${neon}55`, fontSize: 7, color: neon }}>
-          ✓
-        </div>
-      )}
-    </motion.div>
+    </div>
   );
 }
 
-// ─── Path connector line between tiles ───────────────────────────────────────
-function PathConnector({ fromLayout, toLayout, tileSize, neon, isPast }) {
-  const ISO_X_STEP = tileSize * 1.08;
-  const ISO_Y_STEP = tileSize * 0.62;
-  const TH = tileSize * 0.68;
+// The 3D pawn ball — positioned over the current slot
+function Pawn({ slot, player, hopping, containerW, containerH }) {
+  const hex = PAWN_HEX[player.color] || '#a855f7';
+  // Pawn sits at top-center of the current (nearest) slot
+  const pawnCX = slot.cx;
+  const pawnCY = slot.cy - slot.h * 0.18; // slightly above tile center
 
-  const fx = fromLayout.col * ISO_X_STEP + tileSize / 2;
-  const fy = fromLayout.row * ISO_Y_STEP + TH / 2;
-  const tx = toLayout.col * ISO_X_STEP + tileSize / 2;
-  const ty = toLayout.row * ISO_Y_STEP + TH / 2;
-
-  const dx = tx - fx, dy = ty - fy;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const ballSize = Math.round(containerW * slot.w / 100 * 0.22);
+  const clampedBallSize = Math.max(44, Math.min(ballSize, 90));
 
   return (
-    <div className="absolute pointer-events-none" style={{
-      left: fx, top: fy,
-      width: len, height: 3,
-      background: `linear-gradient(90deg, ${neon}${isPast ? '88' : '44'}, ${neon}${isPast ? '44' : '22'})`,
-      boxShadow: isPast ? `0 0 6px ${neon}66` : `0 0 3px ${neon}33`,
-      transformOrigin: '0 50%',
-      transform: `rotate(${angle}deg)`,
-      borderRadius: 2,
-    }} />
-  );
-}
-
-// ─── District label overlay ───────────────────────────────────────────────────
-function DistrictLabel({ name, color, x, y }) {
-  return (
-    <motion.div className="absolute rounded-lg border px-2 py-0.5 pointer-events-none select-none"
+    <motion.div
+      className="absolute pointer-events-none"
       style={{
-        left: x, top: y,
-        fontSize: 7, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase',
-        color, borderColor: `${color}44`, background: 'rgba(0,2,10,0.82)',
-        boxShadow: `0 0 12px ${color}44`, textShadow: `0 0 8px ${color}`,
-        whiteSpace: 'nowrap', zIndex: 5,
-      }}
-      animate={{ opacity: [0.5, 0.9, 0.5] }}
-      transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
-    >
-      {name}
-    </motion.div>
-  );
-}
-
-// ─── Neon motivational signs (flanking) ──────────────────────────────────────
-function NeonSign({ text, color, style }) {
-  return (
-    <motion.div className="absolute flex flex-col items-center justify-center rounded-xl border font-black uppercase text-center pointer-events-none select-none"
-      style={{
-        ...style,
-        minWidth: 70, padding: '6px 10px',
-        fontSize: 8, letterSpacing: '0.1em', lineHeight: 1.3,
-        color, borderColor: `${color}55`,
-        background: 'rgba(0,1,8,0.92)',
-        boxShadow: `0 0 18px ${color}66, 0 0 40px ${color}1a`,
-        textShadow: `0 0 10px ${color}`,
+        left: `${pawnCX}%`,
+        top:  `${pawnCY}%`,
+        transform: 'translate(-50%, -50%)',
         zIndex: 30,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}
-      animate={{ opacity: [0.4, 1, 0.35, 0.88, 0.4] }}
-      transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
+      animate={hopping
+        ? { y: [0, -clampedBallSize * 0.9, -clampedBallSize * 0.4, 0], scale: [1, 1.08, 0.97, 1] }
+        : { y: [0, -clampedBallSize * 0.08, 0] }
+      }
+      transition={hopping
+        ? { duration: HOP_MS / 1000, ease: [0.22, 1, 0.36, 1] }
+        : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+      }
     >
-      {text.split('\n').map((l, i) => <span key={i}>{l}</span>)}
+      {/* Ball */}
+      <div style={{
+        width: clampedBallSize, height: clampedBallSize, borderRadius: '50%',
+        background: `radial-gradient(circle at 32% 26%, rgba(255,255,255,0.9) 0%, ${hex} 16%, ${hex}cc 52%, ${hex}66 100%)`,
+        boxShadow: `0 0 ${clampedBallSize * 0.5}px ${hex}cc, 0 0 ${clampedBallSize}px ${hex}44, 0 ${clampedBallSize * 0.15}px ${clampedBallSize * 0.35}px rgba(0,0,0,0.7), inset 0 -${clampedBallSize * 0.1}px ${clampedBallSize * 0.2}px rgba(0,0,0,0.38)`,
+        border: '2px solid rgba(255,255,255,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative', flexShrink: 0,
+      }}>
+        {player.avatar
+          ? <img src={player.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+          : <span style={{ fontSize: clampedBallSize * 0.32, fontWeight: 900, color: 'rgba(255,255,255,0.95)', textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>P</span>
+        }
+        <div style={{ position: 'absolute', top: clampedBallSize * 0.12, left: clampedBallSize * 0.18, width: clampedBallSize * 0.24, height: clampedBallSize * 0.16, borderRadius: '50%', background: 'rgba(255,255,255,0.62)', transform: 'rotate(-28deg)', filter: 'blur(2px)' }} />
+      </div>
+      {/* Stem */}
+      <div style={{ width: clampedBallSize * 0.22, height: clampedBallSize * 0.32, background: `linear-gradient(180deg,${hex}cc,${hex}22)`, borderRadius: '0 0 6px 6px', marginTop: -2, boxShadow: `0 0 14px ${hex}55` }} />
+      {/* Shadow */}
+      <motion.div style={{ width: clampedBallSize * 0.85, height: clampedBallSize * 0.14, borderRadius: '50%', background: `${hex}55`, filter: 'blur(7px)', marginTop: -2 }}
+        animate={{ scaleX: [1, 0.82, 1], opacity: [0.35, 0.65, 0.35] }}
+        transition={{ duration: 2.2, repeat: Infinity }}
+      />
     </motion.div>
   );
 }
 
-// ─── Main RoadView ────────────────────────────────────────────────────────────
-export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, focusedPathIndex, getTileById, categoryStyles, playerColors }) {
+// Animated neon lights flickering in background signs
+function NeonFlicker({ text, color, style: pos }) {
+  return (
+    <motion.div
+      className="absolute font-black uppercase rounded-xl border text-center pointer-events-none select-none"
+      style={{
+        ...pos,
+        padding: '5px 8px',
+        fontSize: 9, letterSpacing: '0.1em', lineHeight: 1.3,
+        color, borderColor: `${color}55`,
+        background: 'rgba(0,1,8,0.0)',
+        textShadow: `0 0 10px ${color}, 0 0 22px ${color}88`,
+        zIndex: 6,
+      }}
+      animate={{ opacity: [0.5, 1, 0.4, 0.95, 0.5], textShadow: [`0 0 8px ${color}`, `0 0 20px ${color}, 0 0 40px ${color}88`, `0 0 6px ${color}`, `0 0 18px ${color}, 0 0 36px ${color}aa`, `0 0 8px ${color}`] }}
+      transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
+    >
+      {text.split('\n').map((l, i) => <div key={i}>{l}</div>)}
+    </motion.div>
+  );
+}
+
+export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, focusedPathIndex, getTileById, categoryStyles }) {
   const containerRef = useRef(null);
   const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(() => {
-      setContainerSize({ w: el.clientWidth, h: el.clientHeight });
-    });
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const obs = new ResizeObserver(update);
     obs.observe(el);
-    setContainerSize({ w: el.clientWidth, h: el.clientHeight });
     return () => obs.disconnect();
   }, []);
 
   const currentPlayer = players[currentPlayerIndex];
   const activePathIdx = focusedPathIndex !== null && focusedPathIndex !== undefined
     ? focusedPathIndex : (currentPlayer.pathIndex ?? 0);
-
   const pathNeon = ['#a855f7', '#ec4899', '#f97316'][activePathIdx] ?? '#a855f7';
   const tilesOnPath = activePathTiles[activePathIdx] ?? [];
 
@@ -430,245 +260,206 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   );
   const safePos = Math.max(0, Math.min(displayPos, tilesOnPath.length - 1));
 
-  // Build the winding path layout
-  const pathLayout = useMemo(() => buildPathLayout(tilesOnPath.length), [tilesOnPath.length]);
-
-  // Compute tile size to fit the board
-  const COLS = 7;
-  const maxRows = pathLayout.length > 0 ? Math.max(...pathLayout.map(p => p.row)) + 1 : 5;
-  const ISO_X_STEP_RATIO = 1.08;
-  const ISO_Y_STEP_RATIO = 0.62;
-  const PADDING = 16;
-
-  const tileW = Math.min(
-    (containerSize.w - PADDING * 2) / (COLS * ISO_X_STEP_RATIO),
-    (containerSize.h - PADDING * 4 - 80) / (maxRows * ISO_Y_STEP_RATIO + 1),
-    110
-  );
-  const tileSize = Math.max(60, tileW);
-  const ISO_X_STEP = tileSize * ISO_X_STEP_RATIO;
-  const ISO_Y_STEP = tileSize * ISO_Y_STEP_RATIO;
-  const TILE_H = tileSize * 0.68;
-
-  const totalBoardW = COLS * ISO_X_STEP;
-  const totalBoardH = maxRows * ISO_Y_STEP + TILE_H;
-
-  // Center the board
-  const offsetX = (containerSize.w - totalBoardW) / 2;
-  const offsetY = PADDING + 50; // leave room for header
-
-  // Camera: pan so current tile is visible (centered-ish)
-  const curLayout = pathLayout[safePos] ?? { col: 0, row: 0 };
-  const curX = curLayout.col * ISO_X_STEP + offsetX;
-  const curY = curLayout.row * ISO_Y_STEP + offsetY;
-
-  // Scroll/pan to keep current tile in view — clamp so board doesn't go off screen
-  const idealScrollX = containerSize.w / 2 - curX - tileSize / 2;
-  const idealScrollY = containerSize.h / 2 - curY - TILE_H / 2;
-  const panX = Math.max(containerSize.w - totalBoardW - offsetX - PADDING, Math.min(0, idealScrollX));
-  const panY = Math.max(containerSize.h - totalBoardH - offsetY - 60, Math.min(PADDING, idealScrollY));
-
-  const progressPct = tilesOnPath.length > 1 ? Math.round((safePos / (tilesOnPath.length - 1)) * 100) : 0;
-  const pathName = paths[activePathIdx]?.name ?? 'Life';
+  const pathName  = paths[activePathIdx]?.name  ?? 'Life';
   const pathEmoji = paths[activePathIdx]?.emoji ?? '🏙️';
   const currentTile = getTileById(tilesOnPath[safePos] ?? 0);
   const curNeon = CAT_COLOR[currentTile?.category] || pathNeon;
+  const progressPct = tilesOnPath.length > 1 ? Math.round((safePos / (tilesOnPath.length - 1)) * 100) : 0;
 
-  // Upcoming tile info (next 3)
-  const upcomingTiles = tilesOnPath.slice(safePos + 1, safePos + 4).map((id, i) => ({
-    tile: getTileById(id), pos: safePos + 1 + i
-  }));
+  // Build visible tile windows: current + up to 5 ahead (what the image shows)
+  const SHOW_AHEAD = TILE_SLOTS.length - 1; // 5
+  const visibleTiles = [];
+  for (let i = 0; i <= SHOW_AHEAD; i++) {
+    const idx = safePos + i;
+    if (idx < tilesOnPath.length) {
+      visibleTiles.push({ tileIdx: idx, slotIdx: i });
+    }
+  }
 
-  // District labels — one per distinct region
-  const districtLabels = useMemo(() => {
-    const labels = [];
-    let lastDistrict = null;
-    tilesOnPath.forEach((id, i) => {
-      const tile = getTileById(id);
-      const d = getDistrict(tile.category);
-      if (d.name !== lastDistrict && pathLayout[i]) {
-        lastDistrict = d.name;
-        const layout = pathLayout[i];
-        labels.push({ ...d, layout, tileIdx: i });
-      }
-    });
-    return labels;
-  }, [tilesOnPath, getTileById, pathLayout]);
+  // Pick the background image based on path
+  const bgImages = [
+    'https://media.base44.com/images/public/69fd8ff3b9153ebd6453d5ee/cb2e2fa92_ChatGPTImageMay10202608_20_34PM.png',
+    'https://media.base44.com/images/public/69fd8ff3b9153ebd6453d5ee/c206abcf3_ChatGPTImageMay10202608_18_30PM.png',
+    'https://media.base44.com/images/public/69fd8ff3b9153ebd6453d5ee/25fa8ac59_ChatGPTImageMay10202605_32_16PM2.png',
+  ];
+  const bgImage = bgImages[activePathIdx % bgImages.length];
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
 
-      {/* ── Neon city background ── */}
-      <CityBg accent={pathNeon} />
+      {/* ── THE BACKGROUND IMAGE — the actual reference photo ── */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url('${bgImage}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center bottom',
+          zIndex: 1,
+        }}
+        animate={{
+          // Subtle parallax breathing to make the static image feel alive
+          scale: [1, 1.012, 1],
+          backgroundPosition: ['center bottom', 'center 52%', 'center bottom'],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
-      {/* ── Header ── */}
-      <div className="absolute top-0 inset-x-0 z-50 flex items-center justify-between px-4 py-2"
-        style={{ background: 'rgba(0,0,6,0.94)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${pathNeon}30` }}>
+      {/* ── Dark vignette overlay so text stays readable ── */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 40%, transparent 30%, rgba(0,0,0,0.35) 100%), linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)',
+        zIndex: 2,
+      }} />
+
+      {/* ── Rain overlay — makes the image feel animated ── */}
+      <RainOverlay />
+
+      {/* ── Neon flicker signs overlaid on the image (matching sign positions in photos) ── */}
+      <NeonFlicker text="HUSTLE\nHARD"         color="#38bdf8" style={{ top: '8%',  left: '2%', zIndex: 6 }} />
+      <NeonFlicker text="NO RISK\nNO REWARD"   color="#a855f7" style={{ top: '22%', left: '2%', zIndex: 6 }} />
+      <NeonFlicker text="KEEP\nMOVING\nFORWARD" color="#f472b6" style={{ top: '40%', left: '2%', zIndex: 6 }} />
+      <NeonFlicker text="FOCUS\nDISCIPLINE\nDESTINY" color="#34d399" style={{ top: '8%',  right: '2%', zIndex: 6 }} />
+      <NeonFlicker text="THE JOURNEY\nBUILDS YOU"     color="#fbbf24" style={{ top: '28%', right: '2%', zIndex: 6 }} />
+      <NeonFlicker text="24/7\nMINDSET"               color="#f472b6" style={{ top: '20%', right: '20%', zIndex: 6 }} />
+
+      {/* ── Invisible tile glow overlays mapped to image tile positions ── */}
+      {visibleTiles.map(({ tileIdx, slotIdx }) => {
+        const tile = getTileById(tilesOnPath[tileIdx] ?? 0);
+        const neon = CAT_COLOR[tile?.category] || pathNeon;
+        const slot = TILE_SLOTS[slotIdx];
+        if (!slot) return null;
+        const isCurrent = tileIdx === safePos;
+        return (
+          <TileGlow key={`glow-${tileIdx}`}
+            slot={slot} color={neon} active={isCurrent}
+            containerW={containerSize.w} containerH={containerSize.h}
+          />
+        );
+      })}
+
+      {/* ── Tile text labels overlaid on tile slots ── */}
+      {visibleTiles.map(({ tileIdx, slotIdx }) => {
+        const tile = getTileById(tilesOnPath[tileIdx] ?? 0);
+        const slot = TILE_SLOTS[slotIdx];
+        if (!slot) return null;
+        const isCurrent = tileIdx === safePos;
+        return (
+          <TileLabel key={`label-${tileIdx}`}
+            slot={slot} tile={tile}
+            spaceNum={tileIdx + 1}
+            active={isCurrent}
+            pathNeon={pathNeon}
+            categoryStyles={categoryStyles}
+          />
+        );
+      })}
+
+      {/* ── PAWN — animated ball that jumps between tile positions ── */}
+      <Pawn
+        slot={TILE_SLOTS[0]}
+        player={currentPlayer}
+        hopping={hopping}
+        containerW={containerSize.w}
+        containerH={containerSize.h}
+      />
+
+      {/* ── Ground glow pulse under pawn ── */}
+      <motion.div className="absolute pointer-events-none"
+        style={{
+          left: `${TILE_SLOTS[0].cx}%`,
+          top:  `${TILE_SLOTS[0].cy + TILE_SLOTS[0].h * 0.3}%`,
+          transform: 'translate(-50%, -50%)',
+          width: `${TILE_SLOTS[0].w * 0.6}%`,
+          height: 18,
+          borderRadius: '50%',
+          background: curNeon,
+          filter: 'blur(18px)',
+          zIndex: 25,
+        }}
+        animate={{ opacity: [0.2, 0.5, 0.2], scaleX: [1, 1.15, 1] }}
+        transition={{ duration: 1.4, repeat: Infinity }}
+      />
+
+      {/* ── Header bar ── */}
+      <div className="absolute top-0 inset-x-0 z-50 flex items-center justify-between px-4 py-1.5"
+        style={{ background: 'rgba(0,0,6,0.88)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${pathNeon}30` }}>
         <div className="flex items-center gap-2">
-          <span style={{ fontSize: 16 }}>{pathEmoji}</span>
+          <span style={{ fontSize: 14 }}>{pathEmoji}</span>
           <div>
-            <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>EDUCATION PATH</p>
-            <p style={{ fontSize: 12, fontWeight: 900, color: '#fff' }}>{pathName}</p>
+            <p style={{ fontSize: 6, fontWeight: 900, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>YOUR PATH</p>
+            <p style={{ fontSize: 11, fontWeight: 900, color: '#fff' }}>{pathName}</p>
           </div>
         </div>
-        {/* Journey progress */}
-        <div className="flex flex-col items-center gap-1">
-          <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
-            SPACE {safePos + 1} of {tilesOnPath.length}
+        <div className="flex flex-col items-center gap-0.5">
+          <p style={{ fontSize: 6, fontWeight: 900, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
+            SPACE {safePos + 1} / {tilesOnPath.length}
           </p>
-          <div className="rounded-full overflow-hidden" style={{ width: 140, height: 6, background: 'rgba(255,255,255,0.08)' }}>
+          <div className="rounded-full overflow-hidden" style={{ width: 130, height: 5, background: 'rgba(255,255,255,0.08)' }}>
             <motion.div className="h-full rounded-full"
-              style={{ background: `linear-gradient(90deg, ${pathNeon}, ${curNeon})`, boxShadow: `0 0 10px ${pathNeon}` }}
-              animate={{ width: `${progressPct}%` }} transition={{ duration: 0.5, ease: 'easeOut' }}
+              style={{ background: `linear-gradient(90deg,${pathNeon},${curNeon})`, boxShadow: `0 0 8px ${pathNeon}` }}
+              animate={{ width: `${progressPct}%` }} transition={{ duration: 0.45, ease: 'easeOut' }}
             />
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span style={{ fontSize: 14, fontWeight: 900, color: (currentPlayer.money ?? 0) < 0 ? '#f87171' : '#34d399' }}>
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: 13, fontWeight: 900, color: (currentPlayer.money ?? 0) < 0 ? '#f87171' : '#34d399' }}>
             ${currentPlayer.money?.toLocaleString?.() ?? 0}
           </span>
-          {currentPlayer.job && <span style={{ fontSize: 13 }}>{currentPlayer.job.emoji}</span>}
+          {currentPlayer.job && <span style={{ fontSize: 12 }}>{currentPlayer.job.emoji}</span>}
         </div>
       </div>
 
-      {/* ── Left side neon signs ── */}
-      <NeonSign text={'HUSTLE\nHARD'}          color="#f472b6" style={{ left: 4, top: '20%' }} />
-      <NeonSign text={'NO RISK\nNO REWARD'}    color="#a855f7" style={{ left: 4, top: '42%' }} />
-      <NeonSign text={'KEEP\nMOVING\nFORWARD'} color="#38bdf8" style={{ left: 4, top: '64%' }} />
-
-      {/* ── Right side neon signs ── */}
-      <NeonSign text={'LIVE YOUR\nDREAMS'}          color="#f472b6" style={{ right: 4, top: '18%' }} />
-      <NeonSign text={'OPPORTUNITY\nIS EVERYWHERE'} color="#34d399" style={{ right: 4, top: '40%' }} />
-      <NeonSign text={'FOCUS &\nGROW'}              color="#fbbf24" style={{ right: 4, top: '63%' }} />
-
-      {/* ── Upcoming tiles preview (bottom right) ── */}
-      {upcomingTiles.length > 0 && (
-        <div className="absolute bottom-14 right-4 z-40 flex flex-col gap-1.5"
-          style={{ maxWidth: 140 }}>
-          <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.16em', textTransform: 'uppercase', textAlign: 'right', marginBottom: 2 }}>
-            COMING UP
-          </p>
-          {upcomingTiles.map(({ tile, pos }) => {
-            const nc = CAT_COLOR[tile.category] || pathNeon;
-            return (
-              <div key={pos} className="flex items-center gap-1.5 rounded-lg px-2 py-1"
-                style={{ background: 'rgba(0,0,10,0.88)', border: `1px solid ${nc}44`, backdropFilter: 'blur(6px)' }}>
-                <span style={{ fontSize: 11 }}>{CAT_EMOJI[tile.category] || '•'}</span>
-                <div>
-                  <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em' }}>#{pos + 1}</p>
-                  <p style={{ fontSize: 8, fontWeight: 900, color: nc, textShadow: `0 0 6px ${nc}` }}>{tile.name}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── THE BOARD — isometric winding path ── */}
-      <motion.div className="absolute"
-        style={{ left: offsetX, top: offsetY, width: totalBoardW, height: totalBoardH + 20 }}
-        animate={{ x: panX, y: panY }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {/* Path connector lines (drawn first, under tiles) */}
-        {pathLayout.slice(0, -1).map((fromL, i) => {
-          const toL = pathLayout[i + 1];
-          if (!toL) return null;
-          const tile = getTileById(tilesOnPath[i] ?? 0);
-          const nc = CAT_COLOR[tile.category] || pathNeon;
-          return (
-            <PathConnector key={`conn-${i}`}
-              fromLayout={fromL} toLayout={toL}
-              tileSize={tileSize} neon={nc}
-              isPast={i < safePos}
-            />
-          );
-        })}
-
-        {/* District labels */}
-        {districtLabels.map((d, i) => {
-          const lx = d.layout.col * ISO_X_STEP + tileSize / 2;
-          const ly = d.layout.row * ISO_Y_STEP - 18;
-          return <DistrictLabel key={i} name={`${d.emoji} ${d.name}`} color={d.color} x={lx} y={ly} />;
-        })}
-
-        {/* Tiles */}
-        {tilesOnPath.map((tileId, idx) => {
-          const tile = getTileById(tileId);
-          const layout = pathLayout[idx];
-          if (!layout) return null;
-          const isCurrent = idx === safePos;
-          const isPast = idx < safePos;
-          const isAdjacent = Math.abs(idx - safePos) === 1;
-
-          return (
-            <BoardTile key={`${activePathIdx}-${tileId}-${idx}`}
-              tile={tile} tileIdx={idx} layout={layout}
-              isCurrent={isCurrent} isPast={isPast} isAdjacent={isAdjacent}
-              tileSize={tileSize} pathNeon={pathNeon}
-              categoryStyles={categoryStyles}
-              players={players} activePathIdx={activePathIdx}
-            />
-          );
-        })}
-      </motion.div>
-
-      {/* ── Current tile detail callout ── */}
-      <AnimatePresence>
-        {currentTile && (
-          <motion.div className="absolute bottom-14 left-4 z-40 rounded-xl border px-3 py-2"
-            style={{
-              background: 'rgba(0,0,10,0.94)', backdropFilter: 'blur(12px)',
-              border: `1.5px solid ${curNeon}66`, maxWidth: 180,
-              boxShadow: `0 0 20px ${curNeon}44`, borderColor: `${curNeon}66`,
-            }}
-            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            key={safePos}
-          >
-            <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>YOU ARE HERE</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span style={{ fontSize: 16 }}>{CAT_EMOJI[currentTile.category] || '📍'}</span>
-              <p style={{ fontSize: 11, fontWeight: 900, color: curNeon, textShadow: `0 0 10px ${curNeon}` }}>{currentTile.name}</p>
-            </div>
-            {currentTile.actionText && (
-              <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>{currentTile.actionText}</p>
-            )}
-          </motion.div>
-        )}
+      {/* ── "YOU ARE HERE" callout ── */}
+      <AnimatePresence mode="wait">
+        <motion.div key={safePos}
+          className="absolute z-40 rounded-xl border px-3 py-2"
+          style={{
+            bottom: 52, left: 12,
+            background: 'rgba(0,0,8,0.88)', backdropFilter: 'blur(12px)',
+            borderColor: `${curNeon}66`, maxWidth: 170,
+            boxShadow: `0 0 18px ${curNeon}44`,
+          }}
+          initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
+        >
+          <p style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>YOU ARE HERE</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span style={{ fontSize: 15 }}>{CAT_EMOJI[currentTile?.category] || '📍'}</span>
+            <p style={{ fontSize: 11, fontWeight: 900, color: curNeon, textShadow: `0 0 10px ${curNeon}` }}>{currentTile?.name}</p>
+          </div>
+          {currentTile?.actionText && (
+            <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', marginTop: 3, lineHeight: 1.3 }}>{currentTile.actionText}</p>
+          )}
+        </motion.div>
       </AnimatePresence>
 
       {/* ── Bottom player bar ── */}
       <div className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-2 px-4 py-2"
-        style={{ background: 'rgba(0,0,6,0.96)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${pathNeon}25` }}>
+        style={{ background: 'rgba(0,0,6,0.94)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${pathNeon}28` }}>
         <div className="flex gap-1.5 flex-1 flex-wrap">
           {players.map((p, i) => {
             const hex = PAWN_HEX[p.color] || '#a855f7';
             const isActive = i === currentPlayerIndex;
-            const pTiles = activePathTiles[p.pathIndex ?? 0] ?? [];
-            const pProg = pTiles.length > 1 ? Math.round((p.position / (pTiles.length - 1)) * 100) : 0;
             return (
               <div key={p.id} className="flex items-center gap-1.5 rounded-lg px-2 py-1"
                 style={{ background: isActive ? `${hex}1e` : 'rgba(255,255,255,0.03)', border: `1px solid ${isActive ? hex + 'aa' : 'rgba(255,255,255,0.07)'}` }}>
-                <motion.div className="rounded-full flex items-center justify-center font-black text-white overflow-hidden flex-shrink-0"
-                  style={{ width: 22, height: 22, fontSize: 9, background: `radial-gradient(circle at 35% 30%, ${hex}ff, ${hex}99)`, border: `2px solid ${isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)'}`, boxShadow: isActive ? `0 0 10px ${hex}cc` : undefined }}
-                  animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                <motion.div
+                  className="rounded-full flex items-center justify-center font-black text-white overflow-hidden flex-shrink-0"
+                  style={{ width: 22, height: 22, fontSize: 9, background: `radial-gradient(circle at 35% 30%, ${hex}ff, ${hex}99)`, border: `2px solid ${isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.28)'}`, boxShadow: isActive ? `0 0 10px ${hex}cc` : undefined }}
+                  animate={isActive ? { scale: [1, 1.1, 1] } : { scale: 1 }}
                   transition={{ duration: 1.2, repeat: isActive ? Infinity : 0 }}
                 >
                   {p.avatar ? <img src={p.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : p.name.charAt(0)}
                 </motion.div>
-                <div>
-                  <p style={{ fontSize: 8, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.6)' }}>{p.name.split(' ')[0]}</p>
-                  <p style={{ fontSize: 8, fontWeight: 900, color: (p.money ?? 0) < 0 ? '#f87171' : '#34d399' }}>
-                    ${p.money?.toLocaleString?.() ?? p.money ?? 0}
-                  </p>
-                </div>
-                {/* Mini progress bar */}
-                <div className="rounded-full overflow-hidden" style={{ width: 36, height: 3, background: 'rgba(255,255,255,0.08)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${pProg}%`, background: hex, boxShadow: `0 0 4px ${hex}` }} />
-                </div>
+                <span style={{ fontSize: 9, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.6)' }}>{p.name.split(' ')[0]}</span>
+                <span style={{ fontSize: 9, fontWeight: 900, color: (p.money ?? 0) < 0 ? '#f87171' : '#34d399' }}>
+                  ${p.money?.toLocaleString?.() ?? p.money ?? 0}
+                </span>
               </div>
             );
           })}
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p style={{ fontSize: 6, fontWeight: 900, color: 'rgba(255,255,255,0.20)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>NOW ON</p>
+          <p style={{ fontSize: 10, fontWeight: 900, color: curNeon, textShadow: `0 0 8px ${curNeon}` }}>{currentTile?.name}</p>
         </div>
       </div>
     </div>
