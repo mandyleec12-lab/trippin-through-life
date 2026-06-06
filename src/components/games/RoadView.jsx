@@ -224,13 +224,12 @@ export function RoadView({ activePathTiles, players, currentPlayerIndex, focused
     { y: '68%', w: 100, h: 48, color: '#ec4899', text: `STAY\nFOCUSED`, fontSize: 13 },
   ], []);
 
-  // Compute tile trapezoids — tiles recede toward vanishing point
-  // We use SVG + overlaid canvas-text divs for perfect perspective
-  const tileCount = Math.min(TILES_SHOWN, tilesOnPath.length - pos);
+  // Compute tile trapezoids using displayPos so tiles scroll as pawn hops
+  const tileCount = Math.min(TILES_SHOWN, tilesOnPath.length - displayPos);
   const tilesData = useMemo(() => {
     const result = [];
     for (let d = 0; d < tileCount; d++) {
-      const tileIndex = pos + d;
+      const tileIndex = displayPos + d;
       if (tileIndex >= tilesOnPath.length) break;
       // t goes from 0 (near) to 1 (horizon)
       // Space tiles more aggressively near bottom, compress at top
@@ -263,24 +262,44 @@ export function RoadView({ activePathTiles, players, currentPlayerIndex, focused
       result.push({ points, tile, isCurrent, cx, midY, topY, botY, tileW, scale, d });
     }
     return result;
-  }, [pos, tilesOnPath, tileCount]);
+  }, [displayPos, tilesOnPath, tileCount]);
 
-  // Pawn hop animation
-  const [pawnHopY, setPawnHopY] = useState(0);
-  const pawnBobRef = useRef(null);
+  // ── PAWN HOP: step displayPos one tile at a time toward pos ──
+  const [displayPos, setDisplayPos] = useState(pos);
+  const [hopKey, setHopKey] = useState(0);   // incremented each hop to re-trigger animation
+  const [isHopping, setIsHopping] = useState(false);
+  const hopQueueRef = useRef([]);
+  const hoppingRef = useRef(false);
+
+  // When pos changes, queue up each step
   useEffect(() => {
-    setPawnHopY(-30);
-    const t = setTimeout(() => setPawnHopY(0), 500);
-    return () => clearTimeout(t);
+    const diff = pos - displayPos;
+    if (diff === 0) return;
+    const steps = diff > 0
+      ? Array.from({ length: diff }, (_, i) => displayPos + i + 1)
+      : Array.from({ length: -diff }, (_, i) => displayPos - i - 1);
+    hopQueueRef.current = steps;
+    if (!hoppingRef.current) processQueue();
   }, [pos]);
 
-  // Continuous bob
+  function processQueue() {
+    if (hopQueueRef.current.length === 0) { hoppingRef.current = false; setIsHopping(false); return; }
+    hoppingRef.current = true;
+    setIsHopping(true);
+    const next = hopQueueRef.current.shift();
+    setDisplayPos(next);
+    setHopKey(k => k + 1);
+    // Wait for hop animation (440ms) then advance
+    setTimeout(processQueue, 460);
+  }
+
+  // Continuous idle bob (only when not hopping)
   const [bob, setBob] = useState(0);
   useEffect(() => {
     let frame;
     const start = performance.now();
     const tick = (now) => {
-      setBob(Math.sin((now - start) / 600) * 5);
+      setBob(Math.sin((now - start) / 700) * 4);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -624,7 +643,7 @@ export function RoadView({ activePathTiles, players, currentPlayerIndex, focused
                   letterSpacing="2"
                   style={{ filter: `drop-shadow(0 0 6px ${tileColor})` }}
                 >
-                  SPACE {(pos + d + 1)}
+                  SPACE {(displayPos + d + 1)}
                 </text>
 
                 {/* Tile name */}
@@ -653,69 +672,78 @@ export function RoadView({ activePathTiles, players, currentPlayerIndex, focused
         </svg>
 
         {/* ── 3D PAWN (HTML overlay) ── */}
-        <motion.div
-          style={{
-            position: 'absolute',
-            bottom: '8%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 20,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            pointerEvents: 'none',
-          }}
-          animate={{ y: [bob - 5, bob + 5, bob - 5] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          {/* Ball head */}
+        <div style={{
+          position: 'absolute',
+          bottom: '8%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          pointerEvents: 'none',
+        }}>
+          {/* Ball + stem hop together as one unit */}
           <motion.div
-            animate={{ y: pawnHopY }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            style={{
+            key={hopKey}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            animate={isHopping
+              ? { y: [0, -70, 0], scaleX: [1, 0.85, 1], scaleY: [1, 1.18, 1] }
+              : { y: [bob - 4, bob + 4, bob - 4] }
+            }
+            transition={isHopping
+              ? { duration: 0.42, ease: [0.33, 1, 0.68, 1], times: [0, 0.45, 1] }
+              : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+            }
+          >
+            {/* Ball head */}
+            <div style={{
               width: 64, height: 64,
               borderRadius: '50%',
-              background: `radial-gradient(circle at 38% 35%, #ffffff44, ${color} 40%, ${color.replace(')', ', 0.7)').replace('rgb', 'rgba')} 75%, #000 100%)`,
+              background: `radial-gradient(circle at 38% 35%, #ffffff55, ${color} 40%, ${color}bb 75%, #000 100%)`,
               boxShadow: `0 0 30px ${color}, 0 0 70px ${color}88, 0 8px 24px rgba(0,0,0,0.8), inset -8px -8px 20px rgba(0,0,0,0.5), inset 6px 6px 16px rgba(255,255,255,0.2)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
-            }}
-          >
-            {/* Specular highlight */}
+            }}>
+              {/* Specular highlight */}
+              <div style={{
+                position: 'absolute', top: 10, left: 12,
+                width: 16, height: 14,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.65)',
+                filter: 'blur(3px)',
+              }} />
+              <span style={{ color: '#fff', fontSize: 22, fontWeight: 900, textShadow: '0 2px 8px rgba(0,0,0,0.7)', zIndex: 1 }}>
+                {currentPlayer?.name?.charAt(0)?.toUpperCase() ?? 'P'}
+              </span>
+            </div>
+
+            {/* Stem */}
             <div style={{
-              position: 'absolute', top: 10, left: 12,
-              width: 16, height: 14,
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.65)',
-              filter: 'blur(3px)',
+              width: 14, height: 36,
+              background: `linear-gradient(180deg, ${color} 0%, ${color}88 60%, ${color}44 100%)`,
+              borderRadius: '6px 6px 2px 2px',
+              boxShadow: `0 0 12px ${color}88`,
+              marginTop: -4,
             }} />
-            {/* Player letter */}
-            <span style={{
-              color: '#fff',
-              fontSize: 22,
-              fontWeight: 900,
-              textShadow: '0 2px 8px rgba(0,0,0,0.7)',
-              zIndex: 1,
-            }}>{currentPlayer?.name?.charAt(0)?.toUpperCase() ?? 'P'}</span>
           </motion.div>
 
-          {/* Stem */}
-          <div style={{
-            width: 14, height: 36,
-            background: `linear-gradient(180deg, ${color} 0%, ${color}88 60%, ${color}44 100%)`,
-            borderRadius: '6px 6px 2px 2px',
-            boxShadow: `0 0 12px ${color}88`,
-            marginTop: -4,
-          }} />
+          {/* Base disc — stays on ground, squishes on landing */}
+          <motion.div
+            key={`base-${hopKey}`}
+            style={{
+              width: 52, height: 14,
+              background: `radial-gradient(ellipse at center, ${color} 0%, ${color}88 50%, ${color}22 100%)`,
+              borderRadius: '50%',
+              boxShadow: `0 0 20px ${color}cc, 0 0 40px ${color}44`,
+              marginTop: -18,
+            }}
+            animate={isHopping
+              ? { scaleX: [1, 0.7, 1.4, 1], scaleY: [1, 0.6, 1.2, 1] }
+              : {}
+            }
+            transition={isHopping ? { duration: 0.42, times: [0, 0.3, 0.75, 1] } : {}}
+          />
 
-          {/* Base disc */}
-          <div style={{
-            width: 52, height: 14,
-            background: `radial-gradient(ellipse at center, ${color} 0%, ${color}88 50%, ${color}22 100%)`,
-            borderRadius: '50%',
-            boxShadow: `0 0 20px ${color}cc, 0 0 40px ${color}44`,
-            marginTop: -2,
-          }} />
-
-          {/* Glow ring on road */}
+          {/* Glow ring */}
           <motion.div
             style={{
               width: 80, height: 18,
@@ -723,12 +751,11 @@ export function RoadView({ activePathTiles, players, currentPlayerIndex, focused
               border: `2px solid ${color}`,
               boxShadow: `0 0 18px ${color}cc, 0 0 40px ${color}66`,
               marginTop: 2,
-              opacity: 0.7,
             }}
             animate={{ scaleX: [0.9, 1.1, 0.9], opacity: [0.5, 0.85, 0.5] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
           />
-        </motion.div>
+        </div>
       </div>
 
       {/* ── RAIN STREAKS ── */}
