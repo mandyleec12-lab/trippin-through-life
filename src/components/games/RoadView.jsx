@@ -320,23 +320,33 @@ function TileCard({ tile, spaceNum, isNearest, neon, slot, categoryStyles, scrol
   );
 }
 
-// ─── Pawn (fixed foreground, bobs & hops) ────────────────────────────────────
-function Pawn({ player, hopping, neon }) {
+// ─── Pawn (travels between tile slots) ───────────────────────────────────────
+function Pawn({ player, slotIndex, neon }) {
   const hex = PAWN_HEX[player.color] || '#a855f7';
-  const sz = 82;
+  const sz = Math.max(44, Math.round(82 * (SLOTS[slotIndex]?.w ?? SLOTS[0].w) / SLOTS[0].w));
+  const slot = SLOTS[slotIndex] ?? SLOTS[0];
+  const pawnLeft = slot.cx;
+  const pawnTop = slot.cy - slot.h * 0.32;
 
   return (
     <motion.div
-      style={{ position: 'absolute', left: `${PAWN_SLOT.cx}%`, top: `${PAWN_SLOT.cy - PAWN_SLOT.h * 0.3}%`, transform: 'translate(-50%, -100%)', zIndex: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}
-      animate={hopping
-        ? { y: [0, -sz * 0.95, -sz * 0.3, 0], scale: [1, 1.07, 0.97, 1], rotate: [0, -4, 3, 0] }
-        : { y: [0, -sz * 0.07, 0] }
-      }
-      transition={hopping
-        ? { duration: 0.48, ease: [0.22, 1, 0.36, 1] }
-        : { duration: 2.1, repeat: Infinity, ease: 'easeInOut' }
-      }
+      style={{ position: 'absolute', transform: 'translate(-50%, -100%)', zIndex: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}
+      animate={{
+        left: `${pawnLeft}%`,
+        top: `${pawnTop}%`,
+        // Arc hop: rise up mid-travel
+        y: [0, -sz * 1.1, 0],
+        scale: [1, 1.08, 1],
+      }}
+      transition={{
+        left: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+        top:  { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+        y:    { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+        scale:{ duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+      }}
     >
+      {/* Idle bob wrapper */}
+      <motion.div animate={{ y: [0, -sz * 0.07, 0] }} transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {/* Ball */}
       <div style={{
         width: sz, height: sz, borderRadius: '50%', position: 'relative', flexShrink: 0,
@@ -363,6 +373,7 @@ function Pawn({ player, hopping, neon }) {
         animate={{ scaleX: [1, 0.8, 1], opacity: [0.3, 0.6, 0.3] }}
         transition={{ duration: 2.1, repeat: Infinity }}
       />
+      </motion.div>{/* end idle bob */}
     </motion.div>
   );
 }
@@ -379,24 +390,28 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   const pathName  = paths[activePathIdx]?.name  ?? 'Life';
   const pathEmoji = paths[activePathIdx]?.emoji ?? '🏙️';
 
-  // Step animation: displayPos steps toward pos one at a time, triggering hop
+  // Step animation: displayPos steps toward pos one at a time
+  // pawnSlot: 0 = current tile (nearest), briefly goes to slot -1 mid-hop (arc)
   const [displayPos, setDisplayPos] = useState(pos);
-  const [hopping, setHopping] = useState(false);
+  const [pawnSlot, setPawnSlot] = useState(0); // which SLOT index the pawn is on (0=current)
   const prevPosRef = useRef(pos);
 
   useEffect(() => {
     if (pos === displayPos) return;
     const dir = pos > displayPos ? 1 : -1;
-    setHopping(true);
-    const t1 = setTimeout(() => setHopping(false), 340);
-    const t2 = setTimeout(() => setDisplayPos(p => p + dir), 480);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // Pawn jumps: animate to slot 1 (1 ahead), then board advances, pawn snaps back to slot 0
+    setPawnSlot(1); // pawn visually moves to the next tile up
+    const t1 = setTimeout(() => {
+      setDisplayPos(p => p + dir);
+      setPawnSlot(0); // snap back to current (slot 0 = new current tile)
+    }, 480);
+    return () => clearTimeout(t1);
   }, [pos, displayPos]);
 
   // Reset on path change
   useEffect(() => {
     setDisplayPos(pos);
-    setHopping(false);
+    setPawnSlot(0);
   }, [activePathIdx]);
 
   const safePos = Math.max(0, Math.min(displayPos, tilesOnPath.length - 1));
@@ -463,21 +478,26 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
         />
       ))}
 
-      {/* ── Pawn — fixed at foreground, hops in place when moving ── */}
-      <Pawn player={currentPlayer} hopping={hopping} neon={curNeon} />
+      {/* ── Pawn — travels between slot positions ── */}
+      <Pawn player={currentPlayer} slotIndex={pawnSlot} neon={curNeon} />
 
-      {/* ── Ground glow under pawn ── */}
-      <motion.div style={{
-        position: 'absolute',
-        left: `${PAWN_SLOT.cx}%`, top: `${PAWN_SLOT.cy + PAWN_SLOT.h * 0.3}%`,
-        transform: 'translate(-50%, -50%)',
-        width: `${PAWN_SLOT.w * 0.55}%`, height: 20,
-        borderRadius: '50%', background: curNeon, filter: 'blur(20px)',
-        zIndex: 35, pointerEvents: 'none',
-      }}
-        animate={{ opacity: [0.2, 0.55, 0.2], scaleX: [1, 1.2, 1] }}
-        transition={{ duration: 1.3, repeat: Infinity }}
-      />
+      {/* ── Ground glow under pawn (follows pawn slot) ── */}
+      {(() => {
+        const gs = SLOTS[pawnSlot] ?? SLOTS[0];
+        return (
+          <motion.div style={{
+            position: 'absolute',
+            left: `${gs.cx}%`, top: `${gs.cy + gs.h * 0.32}%`,
+            transform: 'translate(-50%, -50%)',
+            width: `${gs.w * 0.55}%`, height: 18,
+            borderRadius: '50%', background: curNeon, filter: 'blur(18px)',
+            zIndex: 35, pointerEvents: 'none',
+          }}
+            animate={{ left: `${gs.cx}%`, top: `${gs.cy + gs.h * 0.32}%`, opacity: [0.2, 0.55, 0.2], scaleX: [1, 1.2, 1] }}
+            transition={{ left: { duration: 0.45 }, top: { duration: 0.45 }, opacity: { duration: 1.3, repeat: Infinity }, scaleX: { duration: 1.3, repeat: Infinity } }}
+          />
+        );
+      })()}
 
       {/* ── Header bar ── */}
       <div className="absolute top-0 inset-x-0 z-50 flex items-center justify-between px-4 py-1.5"
