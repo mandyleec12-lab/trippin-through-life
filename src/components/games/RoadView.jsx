@@ -1,44 +1,35 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as THREE from 'three';
 
 const HOP_MS = 440;
 
 const PAWN_HEX = {
-  pink:   '#ec4899',
-  purple: '#a855f7',
-  blue:   '#3b82f6',
-  teal:   '#14b8a6',
-  gold:   '#f59e0b',
-  coral:  '#f43f5e',
+  pink: '#ec4899', purple: '#a855f7', blue: '#3b82f6',
+  teal: '#14b8a6', gold: '#f59e0b', coral: '#f43f5e',
 };
-
 const CAT_NEON = {
-  start:      '#ffffff',
-  finish:     '#fbbf24',
-  money:      '#34d399',
-  money_loss: '#f87171',
-  tax:        '#ef4444',
-  heartbreak: '#f472b6',
-  chaos:      '#fb923c',
-  blessing:   '#38bdf8',
-  glowup:     '#c084fc',
-  wildcard:   '#e879f9',
+  start: '#ffffff', finish: '#fbbf24', money: '#34d399',
+  money_loss: '#f87171', tax: '#ef4444', heartbreak: '#f472b6',
+  chaos: '#fb923c', blessing: '#38bdf8', glowup: '#c084fc', wildcard: '#e879f9',
 };
-
 const CAT_EMOJI = {
-  start:      '🚀', finish:     '🏆',
-  money:      '💹', money_loss: '💸',
-  tax:        '💀', heartbreak: '💔',
-  chaos:      '🔥', blessing:   '✨',
-  glowup:     '🌟', wildcard:   '🃏',
+  start: '🚀', finish: '🏆', money: '💹', money_loss: '💸',
+  tax: '💀', heartbreak: '💔', chaos: '🔥', blessing: '✨',
+  glowup: '🌟', wildcard: '🃏',
 };
 
-// ── Step-by-step pawn animation ──────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return { r, g, b };
+}
+
 function useStepAnimation(targetPos, resetKey) {
   const [displayPos, setDisplayPos] = useState(targetPos);
   const [hopping, setHopping] = useState(false);
   const lastKeyRef = useRef(resetKey);
-
   useEffect(() => {
     if (lastKeyRef.current !== resetKey) {
       lastKeyRef.current = resetKey;
@@ -46,7 +37,6 @@ function useStepAnimation(targetPos, resetKey) {
       setHopping(false);
     }
   }, [resetKey, targetPos]);
-
   useEffect(() => {
     if (displayPos === targetPos) { setHopping(false); return; }
     setHopping(true);
@@ -56,341 +46,405 @@ function useStepAnimation(targetPos, resetKey) {
     }, HOP_MS);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [displayPos, targetPos]);
-
   return { displayPos, hopping };
 }
 
-// ── City background with buildings ───────────────────────────────────────────
-function CityBackground({ pathNeon }) {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Deep night sky */}
-      <div className="absolute inset-0" style={{
-        background: 'linear-gradient(180deg, #020510 0%, #060d28 30%, #04091a 60%, #020408 100%)'
-      }} />
+// ── Three.js Street Scene ──────────────────────────────────────────────────────
+function ThreeStreet({ tilesOnPath, safePos, visibleStart, getTileById, pathNeon, currentPlayer, hopping, players, currentPlayerIndex, categoryStyles }) {
+  const mountRef = useRef(null);
+  const sceneRef = useRef({});
 
-      {/* Stars */}
-      {Array.from({ length: 50 }).map((_, i) => (
-        <motion.div key={i} className="absolute rounded-full bg-white"
-          style={{ width: 1 + (i % 2), height: 1 + (i % 2), left: `${(i * 1.97 + 1) % 100}%`, top: `${(i * 1.73 + 1) % 38}%`, opacity: 0.25 + (i % 5) * 0.1 }}
-          animate={{ opacity: [0.1, 0.7, 0.1] }}
-          transition={{ duration: 2 + (i % 7) * 0.5, repeat: Infinity, delay: i * 0.08 }}
-        />
-      ))}
+  const neonHex = pathNeon || '#a855f7';
+  const pawnHex = PAWN_HEX[currentPlayer.color] || '#a855f7';
 
-      {/* Back buildings layer */}
-      {[0,1,2,3,4,5,6,7,8,9,10].map(i => {
-        const h = 20 + (i % 5) * 14;
-        const w = 6 + (i % 3) * 3;
-        const left = i * 10 - 3;
-        const neonW = i % 3 === 0 ? `${pathNeon}88` : i % 5 === 1 ? '#f472b688' : '#38bdf888';
-        return (
-          <div key={i} className="absolute bottom-0" style={{
-            left: `${left}%`, width: `${w}%`, height: `${h}%`,
-            background: `linear-gradient(180deg, rgba(6,10,28,0.95), rgba(2,4,12,0.99))`,
-            borderTop: `1.5px solid ${neonW}`,
-          }}>
-            {/* Windows */}
-            <div className="absolute inset-x-1 top-2 grid gap-0.5" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-              {Array.from({ length: 18 }).map((_, w) => (
-                <div key={w} style={{
-                  height: 3.5,
-                  borderRadius: 1,
-                  background: w % 5 === 0 ? `${pathNeon}dd` : w % 7 === 0 ? '#fef08a99' : w % 11 === 0 ? '#f472b699' : 'rgba(255,255,255,0.03)',
-                  boxShadow: w % 5 === 0 ? `0 0 8px ${pathNeon}` : w % 7 === 0 ? '0 0 6px #fef08a' : undefined,
-                }} />
-              ))}
-            </div>
-            {/* Rooftop antenna/sign */}
-            {i % 4 === 0 && <div className="absolute -top-8 left-1/2 w-px h-8" style={{ background: `${pathNeon}aa`, boxShadow: `0 0 6px ${pathNeon}` }} />}
-            {i % 5 === 0 && (
-              <motion.div className="absolute -top-5 left-1 rounded-sm px-1" style={{ fontSize: 5, fontWeight: 900, color: pathNeon, background: 'rgba(0,0,0,0.8)', border: `1px solid ${pathNeon}55`, letterSpacing: '0.1em' }}
-                animate={{ opacity: [0.5, 1, 0.3, 0.9, 0.5] }}
-                transition={{ duration: 3 + i * 0.4, repeat: Infinity }}
-              >
-                {['24/7','OPEN','GND','LOFT'][i % 4]}
-              </motion.div>
-            )}
-          </div>
-        );
-      })}
+  useEffect(() => {
+    const el = mountRef.current;
+    if (!el) return;
+    const W = el.clientWidth, H = el.clientHeight;
 
-      {/* Horizon glow */}
-      <div className="absolute" style={{
-        bottom: '28%', left: '50%', transform: 'translateX(-50%)',
-        width: '80%', height: 60,
-        background: `radial-gradient(ellipse, ${pathNeon}33 0%, #f472b622 40%, transparent 70%)`,
-        filter: 'blur(16px)',
-      }} />
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
+    el.appendChild(renderer.domElement);
 
-      {/* Rain streaks */}
-      {Array.from({ length: 38 }).map((_, i) => (
-        <motion.div key={i} className="absolute w-px rounded-full"
-          style={{ left: `${(i * 2.63 + 0.5) % 100}%`, top: '-5%', height: 50 + (i % 6) * 8, background: 'rgba(147,197,253,0.11)' }}
-          animate={{ y: ['0vh', '115vh'], opacity: [0, 0.6, 0] }}
-          transition={{ duration: 1.0 + (i % 7) * 0.08, repeat: Infinity, delay: i * 0.033, ease: 'linear' }}
-        />
-      ))}
+    // Scene
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x010308, 0.045);
+    scene.background = new THREE.Color(0x010308);
 
-      {/* Wet ground reflections flanking the road */}
-      <div className="absolute inset-x-0 bottom-0 h-36" style={{
-        background: `linear-gradient(to top, ${pathNeon}1a, rgba(56,189,248,0.04), transparent)`
-      }} />
-      {[0,1,2,3,4,5].map(i => (
-        <motion.div key={i} className="absolute rounded-full blur-md"
-          style={{ bottom: `${2 + i * 4}%`, left: `${4 + i * 15}%`, width: 50 + i * 15, height: 5, background: i % 2 === 0 ? pathNeon : '#f472b6', opacity: 0 }}
-          animate={{ opacity: [0, 0.28, 0] }}
-          transition={{ duration: 3.5 + i * 0.4, repeat: Infinity, delay: i * 0.9 }}
-        />
-      ))}
+    // Camera — low angle, looking up the street
+    const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 200);
+    camera.position.set(0, 3.2, 10);
+    camera.lookAt(0, 0.5, -12);
 
-      {/* Moving cars */}
-      {[0,1,2].map(i => (
-        <motion.div key={i} className="absolute rounded border border-white/10"
-          style={{ width: 36, height: 14, top: `${75 + i * 5}%`, background: 'rgba(10,14,30,0.9)', left: i % 2 === 0 ? '-5%' : '105%' }}
-          animate={{ x: i % 2 === 0 ? ['0vw','130vw'] : ['0vw','-130vw'], opacity: [0, 0.85, 0] }}
-          transition={{ duration: 8 + i * 2, repeat: Infinity, delay: i * 4, ease: 'linear' }}
-        >
-          <span className="absolute left-0.5 top-0.5 h-1 w-3 rounded-full bg-amber-200/90" />
-          <span className="absolute right-0.5 bottom-0.5 h-1 w-1.5 rounded-full bg-red-400/80" />
-        </motion.div>
-      ))}
+    // ── Ambient + directional light ──
+    scene.add(new THREE.AmbientLight(0x111133, 1.5));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    dirLight.position.set(5, 20, 5);
+    scene.add(dirLight);
 
-      {/* Steam vents */}
-      {[14, 68, 40].map((left, i) => (
-        <motion.div key={i} className="absolute rounded-full blur-xl"
-          style={{ width: 36, height: 36, left: `${left}%`, bottom: `${16 + i * 5}%`, background: 'rgba(180,190,255,0.07)' }}
-          animate={{ y: [0, -90], opacity: [0, 0.4, 0], scale: [0.8, 2.2] }}
-          transition={{ duration: 4 + i * 0.8, repeat: Infinity, delay: i * 1.8 }}
-        />
-      ))}
+    // Neon color
+    const nc = hexToRgb(neonHex);
+    const neonColor = new THREE.Color(nc.r, nc.g, nc.b);
+    const neonPointLight = new THREE.PointLight(neonColor, 3, 25);
+    neonPointLight.position.set(0, 2, 5);
+    scene.add(neonPointLight);
 
-      {/* Street lamp posts flanking */}
-      {[8, 18, 78, 88].map((left, i) => (
-        <div key={i} className="absolute bottom-0" style={{ left: `${left}%`, width: 4, height: '42%', background: 'rgba(100,110,130,0.6)' }}>
-          <div className="absolute -top-1 -left-2 w-8 h-1 rounded-full" style={{ background: 'rgba(140,150,170,0.8)' }} />
-          <motion.div className="absolute -top-3 -left-1 w-6 h-3 rounded-full blur-sm"
-            style={{ background: '#fef3c7' }}
-            animate={{ opacity: [0.6, 1, 0.7] }}
-            transition={{ duration: 2.5 + i * 0.3, repeat: Infinity }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
+    // ── WET STREET GROUND ──
+    const groundGeo = new THREE.PlaneGeometry(60, 200);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x090d1a,
+      roughness: 0.15,
+      metalness: 0.8,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-// ── Neon sign (flanking the street) ──────────────────────────────────────────
-function NeonSign({ text, color, big, left, top, bottom, right, index }) {
-  const lines = text.split('\n');
-  return (
-    <motion.div className="absolute flex flex-col items-center justify-center rounded-xl border font-black uppercase text-center"
-      style={{
-        left, top, bottom, right,
-        minWidth: big ? 100 : 72,
-        padding: big ? '10px 14px' : '6px 10px',
-        fontSize: big ? 12 : 9,
-        letterSpacing: '0.1em',
-        lineHeight: 1.35,
-        color,
-        borderColor: `${color}66`,
-        background: 'rgba(0,2,10,0.88)',
-        boxShadow: `0 0 24px ${color}66, 0 0 50px ${color}22, inset 0 0 14px ${color}11`,
-        textShadow: `0 0 12px ${color}, 0 0 24px ${color}88`,
-        backdropFilter: 'blur(6px)',
-        zIndex: 30,
-      }}
-      animate={{ opacity: [0.45, 1, 0.35, 0.9, 0.45] }}
-      transition={{ duration: 3.2 + index * 0.55, repeat: Infinity, ease: 'easeInOut', delay: index * 0.3 }}
-    >
-      {lines.map((l, i) => <span key={i}>{l}</span>)}
-    </motion.div>
-  );
-}
+    // Road lane stripes
+    const stripeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(nc.r * 0.5, nc.g * 0.5, nc.b * 0.5), emissive: neonColor, emissiveIntensity: 0.3 });
+    for (let z = -50; z < 0; z += 3) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 1.5), stripeMat);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(1.8, 0.002, z);
+      scene.add(stripe);
+      const stripe2 = stripe.clone();
+      stripe2.position.set(-1.8, 0.002, z);
+      scene.add(stripe2);
+    }
 
-// ── Storefront sign ───────────────────────────────────────────────────────────
-function Storefront({ label, color, left, top, bottom, right, index }) {
-  return (
-    <motion.div className="absolute rounded-lg border font-black uppercase text-center px-2 py-1.5"
-      style={{
-        left, top, bottom, right,
-        fontSize: 10, letterSpacing: '0.08em',
-        color, borderColor: `${color}55`,
-        background: 'rgba(0,2,10,0.90)',
-        boxShadow: `0 0 14px ${color}55, inset 0 0 8px ${color}11`,
-        textShadow: `0 0 8px ${color}`,
-        zIndex: 30,
-      }}
-      animate={{ opacity: [0.55, 0.95, 0.55] }}
-      transition={{ duration: 4 + index * 0.6, repeat: Infinity, delay: index * 0.7 }}
-    >
-      {label}
-    </motion.div>
-  );
-}
+    // ── BUILDINGS ──
+    const buildingConfigs = [
+      // left side
+      { x: -9, z: -10, w: 5, h: 22, d: 6, col: 0x0a0d1e },
+      { x: -14, z: -20, w: 6, h: 30, d: 7, col: 0x080b18 },
+      { x: -8, z: -30, w: 4, h: 18, d: 5, col: 0x0c1024 },
+      { x: -13, z: -38, w: 7, h: 35, d: 8, col: 0x070a14 },
+      { x: -9, z: -48, w: 5, h: 26, d: 6, col: 0x0a0d1e },
+      // right side
+      { x: 9, z: -10, w: 5, h: 28, d: 6, col: 0x080b18 },
+      { x: 14, z: -18, w: 6, h: 20, d: 7, col: 0x0a0d1e },
+      { x: 8, z: -28, w: 4, h: 24, d: 5, col: 0x0c1024 },
+      { x: 14, z: -38, w: 7, h: 32, d: 8, col: 0x070a14 },
+      { x: 9, z: -48, w: 5, h: 20, d: 6, col: 0x080b18 },
+    ];
 
-// ── 3D Pawn ───────────────────────────────────────────────────────────────────
-function Pawn3D({ player, hopping }) {
-  const hex = PAWN_HEX[player.color] || '#a855f7';
-  return (
-    <motion.div className="flex flex-col items-center pointer-events-none select-none"
-      animate={hopping
-        ? { y: [0, -44, 0], scale: [1, 1.12, 1] }
-        : { y: [0, -7, 0] }
-      }
-      transition={hopping
-        ? { duration: HOP_MS / 1000, ease: [0.22, 1, 0.36, 1] }
-        : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
-      }
-    >
-      {/* Ball */}
-      <div style={{
-        width: 70, height: 70, borderRadius: '50%',
-        background: `radial-gradient(circle at 33% 28%, white 0%, ${hex}ff 20%, ${hex}bb 60%, ${hex}55 100%)`,
-        boxShadow: `0 0 40px ${hex}cc, 0 0 80px ${hex}55, 0 8px 30px rgba(0,0,0,0.6), inset 0 -8px 20px rgba(0,0,0,0.35)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 22, fontWeight: 900, color: 'white',
-        border: '2px solid rgba(255,255,255,0.45)',
-        position: 'relative',
-        flexShrink: 0,
-      }}>
-        {player.avatar
-          ? <img src={player.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-          : <span style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>P</span>
+    buildingConfigs.forEach(({ x, z, w, h, d, col }) => {
+      const bGeo = new THREE.BoxGeometry(w, h, d);
+      const bMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.9, metalness: 0.1 });
+      const building = new THREE.Mesh(bGeo, bMat);
+      building.position.set(x, h / 2, z);
+      building.castShadow = true;
+      scene.add(building);
+
+      // Window lights
+      const winColors = [neonColor, new THREE.Color(1, 0.95, 0.7), new THREE.Color(0.9, 0.3, 0.8)];
+      for (let wy = 1; wy < h - 1; wy += 1.8) {
+        for (let wx = -w / 2 + 0.5; wx < w / 2; wx += 1.2) {
+          if (Math.random() < 0.45) {
+            const wGeo = new THREE.PlaneGeometry(0.5, 0.7);
+            const wCol = winColors[Math.floor(Math.random() * winColors.length)];
+            const wMat = new THREE.MeshStandardMaterial({ color: wCol, emissive: wCol, emissiveIntensity: Math.random() * 0.8 + 0.2 });
+            const win = new THREE.Mesh(wGeo, wMat);
+            const side = x > 0 ? -1 : 1;
+            win.position.set(x + wx, wy, z + side * d / 2 + 0.02);
+            scene.add(win);
+          }
         }
-        {/* Specular shine */}
-        <div style={{
-          position: 'absolute', top: 9, left: 12, width: 18, height: 13, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.55)', transform: 'rotate(-25deg)', filter: 'blur(3px)',
-        }} />
-      </div>
-      {/* Stem */}
-      <div style={{
-        width: 14, height: 22,
-        background: `linear-gradient(180deg, ${hex}cc, ${hex}33)`,
-        borderRadius: '0 0 6px 6px', marginTop: -2,
-        boxShadow: `0 0 14px ${hex}66`,
-      }} />
-      {/* Shadow pool */}
-      <motion.div
-        style={{ width: 56, height: 10, borderRadius: '50%', background: `${hex}55`, filter: 'blur(8px)', marginTop: -2 }}
-        animate={{ scaleX: [1, 0.85, 1], opacity: [0.4, 0.7, 0.4] }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-      />
-    </motion.div>
-  );
+      }
+
+      // Rooftop neon accent
+      const roofGeo = new THREE.BoxGeometry(w + 0.3, 0.15, d + 0.3);
+      const roofMat = new THREE.MeshStandardMaterial({ color: neonColor, emissive: neonColor, emissiveIntensity: 0.6 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(x, h + 0.07, z);
+      scene.add(roof);
+    });
+
+    // ── NEON BILLBOARD SIGNS ──
+    const signData = [
+      { text: 'HUSTLE\nHARD', x: -7, y: 7, z: -6, col: 0xf472b6 },
+      { text: 'NO RISK\nNO REWARD', x: -7, y: 4, z: -14, col: 0xa855f7 },
+      { text: 'KEEP MOVING\nFORWARD', x: -7, y: 4, z: -22, col: 0x38bdf8 },
+      { text: 'FOCUS\nDISCIPLINE\nDESTINY', x: 7, y: 8, z: -6, col: 0x34d399 },
+      { text: 'OPPORTUNITY\nIS EVERYWHERE', x: 7, y: 6, z: -15, col: 0x38bdf8 },
+      { text: 'LIVE YOUR\nDREAMS', x: 7, y: 4, z: -22, col: 0xf472b6 },
+    ];
+
+    signData.forEach(({ x, y, z, col }) => {
+      const sGeo = new THREE.BoxGeometry(3.5, 1.6, 0.1);
+      const sMat = new THREE.MeshStandardMaterial({
+        color: 0x000510, emissive: new THREE.Color((col >> 16 & 255) / 255, (col >> 8 & 255) / 255, (col & 255) / 255),
+        emissiveIntensity: 0.6, roughness: 0.5,
+      });
+      const sign = new THREE.Mesh(sGeo, sMat);
+      sign.position.set(x, y, z);
+      scene.add(sign);
+      // Sign frame glow
+      const frameGeo = new THREE.EdgesGeometry(sGeo);
+      const frameMat = new THREE.LineBasicMaterial({ color: col, linewidth: 2 });
+      const frame = new THREE.LineSegments(frameGeo, frameMat);
+      frame.position.copy(sign.position);
+      scene.add(frame);
+      // Point light per sign
+      const sLight = new THREE.PointLight(new THREE.Color((col >> 16 & 255) / 255, (col >> 8 & 255) / 255, (col & 255) / 255), 1.5, 8);
+      sLight.position.set(x, y, z + 0.5);
+      scene.add(sLight);
+    });
+
+    // ── STREET LAMP POSTS ──
+    [-5.5, 5.5].forEach(sx => {
+      [-4, -12, -22, -32].forEach(sz => {
+        const postGeo = new THREE.CylinderGeometry(0.07, 0.07, 6, 8);
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.9, roughness: 0.2 });
+        const post = new THREE.Mesh(postGeo, postMat);
+        post.position.set(sx, 3, sz);
+        scene.add(post);
+        // Lamp head
+        const lampGeo = new THREE.SphereGeometry(0.25, 8, 8);
+        const lampMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, emissive: new THREE.Color(1, 0.95, 0.6), emissiveIntensity: 1.5 });
+        const lamp = new THREE.Mesh(lampGeo, lampMat);
+        lamp.position.set(sx, 6.2, sz);
+        scene.add(lamp);
+        const lampLight = new THREE.PointLight(0xfef3c7, 2, 10);
+        lampLight.position.copy(lamp.position);
+        scene.add(lampLight);
+      });
+    });
+
+    // ── TILE PANELS on the street ──
+    const TILE_W = 3.2, TILE_D = 1.8, TILE_GAP = 0.2;
+    const SHOW_AHEAD = 5;
+    const winEnd = Math.min(tilesOnPath.length - 1, safePos + SHOW_AHEAD);
+    const tileMeshes = [];
+
+    for (let i = safePos; i <= winEnd; i++) {
+      const tileId = tilesOnPath[i];
+      if (tileId == null) continue;
+      const tile = getTileById(tileId);
+      const neon = CAT_NEON[tile.category] || neonHex;
+      const tc = hexToRgb(neon);
+      const tileColor = new THREE.Color(tc.r, tc.g, tc.b);
+      const isCurrent = i === safePos;
+
+      const zPos = -(i - safePos) * (TILE_D + TILE_GAP) - 0.5;
+
+      // Panel
+      const panelGeo = new THREE.BoxGeometry(TILE_W, 0.08, TILE_D);
+      const panelMat = new THREE.MeshStandardMaterial({
+        color: isCurrent ? 0x0e1830 : 0x070c1c,
+        emissive: tileColor,
+        emissiveIntensity: isCurrent ? 0.35 : 0.12,
+        roughness: 0.3,
+        metalness: 0.7,
+      });
+      const panel = new THREE.Mesh(panelGeo, panelMat);
+      panel.position.set(0, 0.04, zPos);
+      panel.receiveShadow = true;
+      scene.add(panel);
+      tileMeshes.push({ panel, isCurrent, tileColor, zPos });
+
+      // Neon border frame
+      const borderGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(TILE_W + 0.05, 0.12, TILE_D + 0.05));
+      const borderMat = new THREE.LineBasicMaterial({ color: tileColor });
+      const border = new THREE.LineSegments(borderGeo, borderMat);
+      border.position.set(0, 0.04, zPos);
+      scene.add(border);
+
+      // Glow light under active tile
+      if (isCurrent) {
+        const tLight = new THREE.PointLight(tileColor, 4, 5);
+        tLight.position.set(0, 0.5, zPos);
+        scene.add(tLight);
+      }
+
+      // Ground reflection glow
+      const glowGeo = new THREE.PlaneGeometry(TILE_W * 1.4, TILE_D * 1.4);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: tileColor, transparent: true,
+        opacity: isCurrent ? 0.18 : 0.07, side: THREE.DoubleSide,
+      });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.rotation.x = -Math.PI / 2;
+      glow.position.set(0, 0.001, zPos);
+      scene.add(glow);
+    }
+
+    // ── PAWN BALL ──
+    const pc = hexToRgb(pawnHex);
+    const pawnColor = new THREE.Color(pc.r, pc.g, pc.b);
+
+    const pawnGeo = new THREE.SphereGeometry(0.55, 32, 32);
+    const pawnMat = new THREE.MeshStandardMaterial({
+      color: pawnColor, emissive: pawnColor, emissiveIntensity: 0.35,
+      roughness: 0.1, metalness: 0.6,
+    });
+    const pawnBall = new THREE.Mesh(pawnGeo, pawnMat);
+    pawnBall.position.set(0, 0.65, -0.1);
+    pawnBall.castShadow = true;
+    scene.add(pawnBall);
+    // Pawn stem
+    const stemGeo = new THREE.CylinderGeometry(0.1, 0.15, 0.5, 16);
+    const stemMat = new THREE.MeshStandardMaterial({ color: pawnColor, emissive: pawnColor, emissiveIntensity: 0.2, metalness: 0.8, roughness: 0.2 });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.set(0, 0.25, -0.1);
+    scene.add(stem);
+    // Pawn glow
+    const pawnLight = new THREE.PointLight(pawnColor, 3, 4);
+    pawnLight.position.set(0, 1, -0.1);
+    scene.add(pawnLight);
+    // Specular highlight on pawn
+    const specGeo = new THREE.SphereGeometry(0.18, 8, 8);
+    const specMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
+    const spec = new THREE.Mesh(specGeo, specMat);
+    spec.position.set(-0.18, 0.95, 0.3);
+    scene.add(spec);
+
+    // Shadow pool under pawn
+    const shadowGeo = new THREE.PlaneGeometry(1.4, 0.9);
+    const shadowMat = new THREE.MeshBasicMaterial({ color: pawnColor, transparent: true, opacity: 0.22 });
+    const shadowPool = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowPool.rotation.x = -Math.PI / 2;
+    shadowPool.position.set(0, 0.002, -0.1);
+    scene.add(shadowPool);
+
+    // ── RAIN PARTICLES ──
+    const rainCount = 2000;
+    const rainGeo = new THREE.BufferGeometry();
+    const rainPos = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      rainPos[i * 3]     = (Math.random() - 0.5) * 40;
+      rainPos[i * 3 + 1] = Math.random() * 30;
+      rainPos[i * 3 + 2] = (Math.random() - 0.5) * 60 - 10;
+    }
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+    const rainMat = new THREE.PointsMaterial({ color: 0x8ab4d4, size: 0.06, transparent: true, opacity: 0.35 });
+    const rain = new THREE.Points(rainGeo, rainMat);
+    scene.add(rain);
+
+    // ── STAR PARTICLES (sky) ──
+    const starCount = 300;
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPos[i * 3]     = (Math.random() - 0.5) * 100;
+      starPos[i * 3 + 1] = 20 + Math.random() * 30;
+      starPos[i * 3 + 2] = (Math.random() - 0.5) * 100 - 20;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.6 });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    // ── MOVING CARS ──
+    const carMeshes = [];
+    [-2.5, 2.5].forEach((laneX, li) => {
+      const carGeo = new THREE.BoxGeometry(0.9, 0.4, 2);
+      const carMat = new THREE.MeshStandardMaterial({ color: li === 0 ? 0x111827 : 0x1f1035, metalness: 0.9, roughness: 0.2 });
+      const car = new THREE.Mesh(carGeo, carMat);
+      car.position.set(laneX, 0.2, -30 + li * 10);
+      scene.add(car);
+      // Headlights
+      const hlColor = li === 0 ? 0xfef3c7 : 0xff4444;
+      [-0.3, 0.3].forEach(hx => {
+        const hlGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const hlMat = new THREE.MeshStandardMaterial({ color: hlColor, emissive: new THREE.Color(hlColor), emissiveIntensity: 2 });
+        const hl = new THREE.Mesh(hlGeo, hlMat);
+        hl.position.set(laneX + hx, 0.2, car.position.z + (li === 0 ? 1.1 : -1.1));
+        scene.add(hl);
+        carMeshes.push({ car, hl, speed: li === 0 ? 0.18 : -0.22, hlOffset: { x: hx, z: li === 0 ? 1.1 : -1.1, laneX } });
+      });
+      carMeshes.push({ car, speed: li === 0 ? 0.18 : -0.22, laneX });
+    });
+
+    // ── ANIMATION LOOP ──
+    let animId;
+    let t = 0;
+    const rainPositions = rainGeo.attributes.position.array;
+
+    const animate = () => {
+      animId = requestAnimationFrame(animate);
+      t += 0.016;
+
+      // Pawn bob
+      pawnBall.position.y = 0.65 + Math.sin(t * 1.8) * (hopping ? 0.8 : 0.12);
+      stem.position.y = 0.25 + Math.sin(t * 1.8) * (hopping ? 0.8 : 0.12) * 0.3;
+      spec.position.y = 0.95 + Math.sin(t * 1.8) * (hopping ? 0.8 : 0.12);
+
+      // Tile pulse
+      tileMeshes.forEach(({ panel, isCurrent, tileColor, zPos }) => {
+        if (isCurrent) {
+          panel.material.emissiveIntensity = 0.25 + Math.sin(t * 2.8) * 0.15;
+        }
+      });
+
+      // Neon flicker on path light
+      neonPointLight.intensity = 2.5 + Math.sin(t * 3.2) * 0.5;
+
+      // Rain fall
+      for (let i = 0; i < rainCount; i++) {
+        rainPositions[i * 3 + 1] -= 0.35;
+        if (rainPositions[i * 3 + 1] < -1) {
+          rainPositions[i * 3 + 1] = 25;
+        }
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+
+      // Cars move
+      carMeshes.forEach(obj => {
+        if (!obj.car) return;
+        obj.car.position.z += obj.speed;
+        if (obj.car.position.z > 15) obj.car.position.z = -55;
+        if (obj.car.position.z < -55) obj.car.position.z = 15;
+      });
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Resize
+    const onResize = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', onResize);
+
+    sceneRef.current = { renderer, scene, camera, animId };
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', onResize);
+      renderer.dispose();
+      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+    };
+  }, [safePos, tilesOnPath.length, neonHex, pawnHex, hopping]);
+
+  return <div ref={mountRef} style={{ width: '100%', height: '100%' }} />;
 }
 
-// ── Tile card (flat on the ground, perspective applied by parent) ─────────────
-function TileCard({ tile, idx, isCurrent, isStart, isFinish, occupants, hopping, categoryStyles, pathNeon, scale }) {
-  const styleInfo = categoryStyles[tile.category] || categoryStyles.start;
-  const Icon = styleInfo.icon;
-  const neon  = CAT_NEON[tile.category]  || pathNeon;
-  const emoji = CAT_EMOJI[tile.category] || '🌃';
-
-  const label = isStart ? 'THE JOURNEY BEGINS' : isFinish ? 'YOU MADE IT! 🏆' : tile.name.toUpperCase();
-
-  // scale controls font size for perspective depth illusion
-  const fs  = Math.max(7, Math.round(15 * scale));
-  const fs2 = Math.max(6, Math.round(10 * scale));
-  const iconSz = Math.max(14, Math.round(24 * scale));
-
+// ── 2D Overlay: tile labels, signs, UI ───────────────────────────────────────
+function NeonSign({ text, color, style: pos }) {
   return (
-    <div style={{
-      width: '100%', height: '100%',
-      background: isCurrent
-        ? `linear-gradient(145deg, rgba(8,12,32,0.98), rgba(14,20,50,0.96))`
-        : `linear-gradient(145deg, rgba(4,6,18,0.95), rgba(2,4,12,0.97))`,
-      border: `${isCurrent ? 2.5 : 1.5}px solid ${isCurrent ? neon : neon + '55'}`,
-      borderRadius: 12,
-      boxShadow: isCurrent
-        ? `0 0 50px ${neon}aa, 0 0 100px ${neon}33, inset 0 0 20px ${neon}18`
-        : `0 0 14px ${neon}33, inset 0 0 10px ${neon}08`,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      overflow: 'hidden', position: 'relative',
-    }}>
-      {/* Scanlines */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 3px)', opacity: 0.5
-      }} />
-      {/* Top neon bar */}
-      <div className="absolute inset-x-0 top-0" style={{ height: 2.5, background: `linear-gradient(90deg,transparent,${neon},transparent)`, opacity: isCurrent ? 1 : 0.5 }} />
-      {/* Bottom reflection */}
-      <div className="absolute inset-x-0 bottom-0" style={{ height: '35%', background: `linear-gradient(to top,${neon}22,transparent)` }} />
-
-      {/* Space label */}
-      {!isStart && !isFinish && (
-        <p style={{ fontSize: Math.max(6, fs2 - 1), color: 'rgba(255,255,255,0.35)', fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 2 }}>
-          SPACE {idx + 1}
-        </p>
-      )}
-
-      {/* Main row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', width: '100%', justifyContent: 'center' }}>
-        <div style={{
-          width: iconSz, height: iconSz, borderRadius: 8, flexShrink: 0,
-          background: `${neon}18`, border: `1px solid ${neon}55`,
-          boxShadow: isCurrent ? `0 0 16px ${neon}88` : `0 0 6px ${neon}33`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon style={{ width: iconSz * 0.6, height: iconSz * 0.6, color: neon }} />
-        </div>
-        <p style={{
-          fontSize: fs, fontWeight: 900, color: isCurrent ? '#fff' : 'rgba(255,255,255,0.88)',
-          letterSpacing: '0.05em', lineHeight: 1.2, textTransform: 'uppercase',
-          textShadow: isCurrent ? `0 0 14px ${neon}` : undefined,
-          flex: 1, textAlign: 'center',
-        }}>
-          {label}
-        </p>
-        <span style={{ fontSize: Math.max(10, iconSz * 0.7), opacity: 0.75, flexShrink: 0 }}>{emoji}</span>
-      </div>
-
-      {/* Money badge */}
-      {(tile.effect === 'money_gain' || tile.effect === 'money_loss') && tile.effectValue && (
-        <p style={{
-          fontSize: Math.max(6, fs2), fontWeight: 900, marginTop: 3,
-          color: tile.effect === 'money_gain' ? '#34d399' : '#f87171',
-          background: tile.effect === 'money_gain' ? 'rgba(52,211,153,0.14)' : 'rgba(248,113,113,0.14)',
-          padding: '1px 8px', borderRadius: 20,
-        }}>
-          {tile.effect === 'money_gain' ? '+' : '-'}${Math.abs(tile.effectValue)}
-        </p>
-      )}
-      {tile.effect === 'tax' && <p style={{ fontSize: Math.max(6, fs2), fontWeight: 900, color: '#ef4444', marginTop: 2 }}>💀 ALL TAXED</p>}
-      {tile.effect === 'skip' && <p style={{ fontSize: Math.max(6, fs2), fontWeight: 900, color: '#fb923c', marginTop: 2 }}>⏭ SKIP TURN</p>}
-      {tile.effect === 'roll_again' && <p style={{ fontSize: Math.max(6, fs2), fontWeight: 900, color: '#c084fc', marginTop: 2 }}>🎲 ROLL AGAIN</p>}
-
-      {/* Pawn tokens on non-current tiles */}
-      {occupants.length > 0 && !isCurrent && (
-        <div style={{ display: 'flex', gap: 3, marginTop: 3 }}>
-          {occupants.map(p => {
-            const hex2 = PAWN_HEX[p.color] || '#a855f7';
-            return (
-              <div key={p.id} style={{
-                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                background: `radial-gradient(circle at 35% 35%, ${hex2}ee, ${hex2}88)`,
-                border: '1px solid rgba(255,255,255,0.7)',
-                boxShadow: `0 0 8px ${hex2}cc`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 7, fontWeight: 900, color: 'white',
-              }}>
-                {p.avatar ? <img src={p.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : p.name.charAt(0)}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Active pulse */}
-      {isCurrent && (
-        <motion.div className="absolute inset-0 rounded pointer-events-none"
-          style={{ border: `2.5px solid ${neon}`, boxShadow: `0 0 40px ${neon}` }}
-          animate={{ opacity: [0.1, 1, 0.1] }}
-          transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-    </div>
+    <motion.div className="absolute flex flex-col items-center justify-center rounded-xl border font-black uppercase text-center pointer-events-none"
+      style={{
+        ...pos,
+        minWidth: 80, padding: '8px 12px', fontSize: 10, letterSpacing: '0.1em', lineHeight: 1.3,
+        color, borderColor: `${color}66`, background: 'rgba(0,2,10,0.90)',
+        boxShadow: `0 0 22px ${color}77, 0 0 45px ${color}22`,
+        textShadow: `0 0 12px ${color}`, zIndex: 30,
+      }}
+      animate={{ opacity: [0.4, 1, 0.35, 0.9, 0.4] }}
+      transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
+    >
+      {text.split('\n').map((l, i) => <span key={i}>{l}</span>)}
+    </motion.div>
   );
 }
 
@@ -399,108 +453,154 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   const currentPlayer = players[currentPlayerIndex];
 
   const activePathIdx = (focusedPathIndex !== null && focusedPathIndex !== undefined)
-    ? focusedPathIndex
-    : (currentPlayer.pathIndex ?? 0);
+    ? focusedPathIndex : (currentPlayer.pathIndex ?? 0);
 
   const pathNeon    = ['#a855f7', '#ec4899', '#f97316'][activePathIdx] ?? '#a855f7';
   const tilesOnPath = activePathTiles[activePathIdx] ?? [];
 
   const { displayPos, hopping } = useStepAnimation(
-    currentPlayer.position,
-    `${currentPlayer.id}-${activePathIdx}`
+    currentPlayer.position, `${currentPlayer.id}-${activePathIdx}`
   );
   const safePos = Math.max(0, Math.min(displayPos, tilesOnPath.length - 1));
-
-  // Visible window: current + tiles ahead
-  const SHOW_AHEAD  = 5;
-  const SHOW_BEHIND = 0;
-  const winStart = Math.max(0, safePos - SHOW_BEHIND);
-  const winEnd   = Math.min(tilesOnPath.length - 1, safePos + SHOW_AHEAD);
-  // visibleTiles[0] = current (nearest), [n] = farthest
-  const visibleTiles = tilesOnPath.slice(winStart, winEnd + 1);
-
-  const occupantMap = useMemo(() => {
-    const map = {};
-    for (const p of players) {
-      const pPath = p.pathIndex ?? 0;
-      if (pPath !== activePathIdx) continue;
-      const idx = (p.id === currentPlayer.id) ? safePos : p.position;
-      const clamped = Math.max(0, Math.min(idx, tilesOnPath.length - 1));
-      map[clamped] = map[clamped] ? [...map[clamped], p] : [p];
-    }
-    return map;
-  }, [players, activePathIdx, currentPlayer.id, safePos, tilesOnPath.length]);
 
   const progressPct = tilesOnPath.length > 1 ? Math.round((safePos / (tilesOnPath.length - 1)) * 100) : 0;
   const pathName    = paths[activePathIdx]?.name ?? 'Life';
   const pathEmoji   = paths[activePathIdx]?.emoji ?? '🏙️';
   const currentTile = getTileById(tilesOnPath[safePos] ?? 0);
+  const curNeon     = CAT_NEON[currentTile?.category] || pathNeon;
 
-  // Tile geometry: bottom tile is widest+tallest, each step up shrinks
-  const BASE_W = 340;
-  const BASE_H = 100;
-  const GAP    = 6;
+  // Visible tiles info for overlay labels
+  const SHOW_AHEAD = 5;
+  const winEnd = Math.min(tilesOnPath.length - 1, safePos + SHOW_AHEAD);
+  const visibleTiles = tilesOnPath.slice(safePos, winEnd + 1);
 
-  // Scale factor per step up (0 = current/bottom, i = i steps ahead)
-  const tileScale = (i) => Math.pow(0.72, i);
+  // Bottom positions for tile labels (perspective-matched)
+  const tileBottomPositions = [62, 52, 44, 37, 31, 26];
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
-      {/* ── City background ── */}
-      <CityBackground pathNeon={pathNeon} />
 
-      {/* ── Left neon billboard signs ── */}
-      <NeonSign text={'HUSTLE\nHARD'}         color="#f472b6" big left="1%" top="12%" index={0} />
-      <NeonSign text={'NO RISK\nNO REWARD'}   color="#a855f7" left="1%" top="30%" index={1} />
-      <NeonSign text={'KEEP\nMOVING\nFORWARD'} color="#38bdf8" left="1%" top="50%" index={2} />
-      <NeonSign text={'INVEST\nIN YOURSELF'}  color="#34d399" big left="1%" top="68%" index={3} />
-      <Storefront label="☕ CAFE"   color="#fb923c" left="1%"  top="84%" index={0} />
-      <Storefront label="📚 BOOKS"  color="#38bdf8" left="1%"  top="90%" index={1} />
-      <Storefront label="🏋️ GYM"   color="#a855f7" left="12%" top="88%" index={2} />
+      {/* ── THREE.JS 3D scene fills entire board ── */}
+      <ThreeStreet
+        tilesOnPath={tilesOnPath}
+        safePos={safePos}
+        visibleStart={safePos}
+        getTileById={getTileById}
+        pathNeon={pathNeon}
+        currentPlayer={currentPlayer}
+        hopping={hopping}
+        players={players}
+        currentPlayerIndex={currentPlayerIndex}
+        categoryStyles={categoryStyles}
+      />
 
-      {/* ── Right neon billboard signs ── */}
-      <NeonSign text={'FOCUS\nDISCIPLINE\nDESTINY'}  color="#34d399" big right="1%" top="10%" index={0} />
-      <NeonSign text={'OPPORTUNITY\nIS EVERYWHERE'}   color="#38bdf8" big right="1%" top="30%" index={1} />
-      <NeonSign text={'LIVE YOUR\nDREAMS'}            color="#f472b6" right="1%" top="50%" index={2} />
-      <NeonSign text={'NO RISK\nNO REWARD'}           color="#fbbf24" right="1%" top="66%" index={3} />
-      <Storefront label="🏦 MARKET"  color="#34d399" right="1%"  top="82%" index={0} />
-      <Storefront label="🏨 MOTEL"   color="#c084fc" right="1%"  top="88%" index={1} />
-      <Storefront label="🎯 24/7"    color="#fbbf24" right="12%" top="85%" index={2} />
+      {/* ── Tile label overlays (perspective-placed) ── */}
+      {visibleTiles.map((tileId, i) => {
+        const tile    = getTileById(tileId);
+        const neon    = CAT_NEON[tile.category] || pathNeon;
+        const emoji   = CAT_EMOJI[tile.category] || '';
+        const isCur   = i === 0;
+        const styleInfo = categoryStyles?.[tile.category] || categoryStyles?.start;
+        const Icon    = styleInfo?.icon;
 
-      {/* ── Game title floating at horizon ── */}
-      <motion.div className="absolute font-black text-center rounded-2xl border px-5 py-2"
+        // Perspective scaling: i=0 biggest, shrinks up
+        const scale   = Math.pow(0.78, i);
+        const width   = Math.round(300 * scale);
+        const bottom  = `${tileBottomPositions[i] ?? 20}%`;
+        const fontSize = Math.max(8, Math.round(15 * scale));
+        const subFs   = Math.max(6, Math.round(10 * scale));
+
+        const label = i === 0 && safePos === 0 ? 'THE JOURNEY BEGINS'
+          : safePos + i === tilesOnPath.length - 1 ? 'YOU MADE IT! 🏆'
+          : tile.name.toUpperCase();
+
+        return (
+          <motion.div key={`label-${safePos + i}`}
+            className="absolute flex flex-col items-center pointer-events-none"
+            style={{ bottom, left: '50%', transform: 'translateX(-50%)', width, zIndex: 25 }}
+            animate={isCur ? { opacity: [0.8, 1, 0.8] } : { opacity: 1 }}
+            transition={isCur ? { duration: 1.2, repeat: Infinity } : undefined}
+          >
+            {/* Space number */}
+            {!isCur && (
+              <p style={{ fontSize: Math.max(5, subFs - 1), fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 1 }}>
+                SPACE {safePos + i + 1}
+              </p>
+            )}
+            {/* Main label row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {Icon && (
+                <div style={{ width: Math.max(12, 22 * scale), height: Math.max(12, 22 * scale), borderRadius: 6, background: `${neon}18`, border: `1px solid ${neon}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon style={{ width: Math.max(8, 13 * scale), height: Math.max(8, 13 * scale), color: neon }} />
+                </div>
+              )}
+              <p style={{
+                fontSize, fontWeight: 900, color: isCur ? '#fff' : 'rgba(255,255,255,0.85)',
+                letterSpacing: '0.05em', lineHeight: 1.2, textTransform: 'uppercase',
+                textShadow: `0 0 16px ${neon}, 0 0 30px ${neon}88`,
+                textAlign: 'center',
+              }}>
+                {label}
+              </p>
+              <span style={{ fontSize: Math.max(9, 18 * scale), opacity: 0.8, flexShrink: 0 }}>{emoji}</span>
+            </div>
+            {/* Money / effect badge */}
+            {(tile.effect === 'money_gain' || tile.effect === 'money_loss') && tile.effectValue && (
+              <p style={{
+                fontSize: Math.max(6, subFs), fontWeight: 900, marginTop: 2,
+                color: tile.effect === 'money_gain' ? '#34d399' : '#f87171',
+                textShadow: tile.effect === 'money_gain' ? '0 0 10px #34d399' : '0 0 10px #f87171',
+              }}>
+                {tile.effect === 'money_gain' ? '+' : '-'}${Math.abs(tile.effectValue)}
+              </p>
+            )}
+          </motion.div>
+        );
+      })}
+
+      {/* ── Neon billboard signs (CSS overlay on sides) ── */}
+      <NeonSign text={'HUSTLE\nHARD'}          color="#f472b6" style={{ left: 6,  top: '14%' }} />
+      <NeonSign text={'NO RISK\nNO REWARD'}    color="#a855f7" style={{ left: 6,  top: '34%' }} />
+      <NeonSign text={'KEEP\nMOVING\nFORWARD'} color="#38bdf8" style={{ left: 6,  top: '54%' }} />
+      <NeonSign text={'INVEST IN\nYOURSELF'}   color="#34d399" style={{ left: 6,  top: '72%' }} />
+      <NeonSign text={'FOCUS\nDISCIPLINE\nDESTINY'} color="#34d399" style={{ right: 6, top: '12%' }} />
+      <NeonSign text={'OPPORTUNITY\nIS EVERYWHERE'}  color="#38bdf8" style={{ right: 6, top: '32%' }} />
+      <NeonSign text={'LIVE YOUR\nDREAMS'}           color="#f472b6" style={{ right: 6, top: '52%' }} />
+      <NeonSign text={'NO RISK\nNO REWARD'}          color="#fbbf24" style={{ right: 6, top: '70%' }} />
+
+      {/* Game title at vanishing point */}
+      <motion.div className="absolute font-black text-center rounded-2xl border px-4 py-1.5 pointer-events-none"
         style={{
           top: '10%', left: '50%', transform: 'translateX(-50%)',
           fontSize: 11, letterSpacing: '0.16em', color: pathNeon,
           borderColor: `${pathNeon}55`, background: 'rgba(0,0,8,0.88)',
-          boxShadow: `0 0 30px ${pathNeon}77, 0 0 60px ${pathNeon}33`,
-          textShadow: `0 0 14px ${pathNeon}`, whiteSpace: 'nowrap', zIndex: 35,
+          boxShadow: `0 0 28px ${pathNeon}77`, textShadow: `0 0 12px ${pathNeon}`,
+          whiteSpace: 'nowrap', zIndex: 35,
         }}
-        animate={{ opacity: [0.6, 1, 0.6] }}
+        animate={{ opacity: [0.55, 1, 0.55] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
-        Trippin' Through Life
+        ✦ Trippin' Through Life ✦
       </motion.div>
 
-      {/* ── Header bar ── */}
+      {/* ── Header ── */}
       <div className="absolute top-0 inset-x-0 z-40 flex items-center justify-between px-4 py-1.5"
-        style={{ background: 'rgba(0,0,8,0.88)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${pathNeon}35` }}>
+        style={{ background: 'rgba(0,0,8,0.90)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${pathNeon}35` }}>
         <div className="flex items-center gap-2">
           <span>{pathEmoji}</span>
           <div>
-            <p className="font-black uppercase text-white/40" style={{ fontSize: 6, letterSpacing: '0.2em' }}>YOUR PATH</p>
+            <p className="font-black uppercase text-white/35" style={{ fontSize: 6, letterSpacing: '0.22em' }}>YOUR PATH</p>
             <p className="font-black text-white" style={{ fontSize: 11 }}>{pathName}</p>
           </div>
         </div>
         <div className="flex flex-col items-center gap-0.5">
-          <p className="font-black text-white/30 uppercase" style={{ fontSize: 6, letterSpacing: '0.18em' }}>
+          <p className="font-black text-white/25 uppercase" style={{ fontSize: 6, letterSpacing: '0.18em' }}>
             SPACE {safePos + 1} / {tilesOnPath.length}
           </p>
           <div className="rounded-full overflow-hidden" style={{ width: 110, height: 5, background: 'rgba(255,255,255,0.08)' }}>
             <motion.div className="h-full rounded-full"
               style={{ background: pathNeon, boxShadow: `0 0 8px ${pathNeon}` }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
+              animate={{ width: `${progressPct}%` }} transition={{ duration: 0.45, ease: 'easeOut' }}
             />
           </div>
         </div>
@@ -512,109 +612,16 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
         </div>
       </div>
 
-      {/* ── 3D STREET — the magic ── */}
-      {/*
-        We use a CSS 3D perspective container.
-        The tiles are laid out in a column and then rotated on the X axis
-        so they lie flat on the "ground" receding to the horizon.
-        The bottom tile (current) is the closest and largest.
-        Each tile above it is scaled smaller to reinforce perspective depth.
-      */}
-      <div className="absolute inset-0 flex items-end justify-center pointer-events-none"
-        style={{ paddingBottom: 80, paddingTop: 60, zIndex: 20 }}>
-
-        {/* Perspective scene root */}
-        <div style={{
-          perspective: 900,
-          perspectiveOrigin: '50% 0%',
-          width: BASE_W + 80,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
-          height: '100%',
-        }}>
-          {/* Road surface behind tiles */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-            width: BASE_W,
-            height: '100%',
-            background: `linear-gradient(180deg, transparent 0%, rgba(4,6,18,0.0) 20%, rgba(8,12,28,0.55) 60%, rgba(10,14,32,0.85) 100%)`,
-            pointerEvents: 'none',
-          }} />
-
-          {/* Road lane markings */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%) rotateX(62deg)',
-            transformOrigin: 'bottom center',
-            width: 4, height: '160%',
-            background: `repeating-linear-gradient(180deg, ${pathNeon}88 0px, ${pathNeon}88 24px, transparent 24px, transparent 44px)`,
-            opacity: 0.35,
-          }} />
-
-          {/* Tile strip — rendered farthest→nearest so near is on top */}
-          <div style={{
-            display: 'flex', flexDirection: 'column-reverse',
-            alignItems: 'center',
-            gap: GAP,
-            transform: 'rotateX(52deg)',
-            transformOrigin: 'bottom center',
-            transformStyle: 'preserve-3d',
-            width: '100%',
-            paddingBottom: 10,
-          }}>
-            {visibleTiles.map((tileId, i) => {
-              // i=0 → bottom/nearest (current), i=n → top/farthest
-              const actualIdx = winStart + i;
-              const tile      = getTileById(tileId);
-              const isCurrent = actualIdx === safePos;
-              const isStart   = actualIdx === 0;
-              const isFinish  = actualIdx === tilesOnPath.length - 1;
-              const occupants = occupantMap[actualIdx] ?? [];
-              const sc        = tileScale(i);
-              const tw        = Math.round(BASE_W * sc);
-              const th        = Math.round(BASE_H * sc);
-
-              return (
-                <motion.div key={`${activePathIdx}-${tileId}-${actualIdx}`}
-                  style={{ width: tw, height: th, flexShrink: 0, pointerEvents: 'auto' }}
-                  animate={isCurrent ? { scale: [1, 1.015, 1] } : { scale: 1 }}
-                  transition={{ duration: 1.6, repeat: isCurrent ? Infinity : 0, ease: 'easeInOut' }}
-                >
-                  <TileCard
-                    tile={tile} idx={actualIdx}
-                    isCurrent={isCurrent} isStart={isStart} isFinish={isFinish}
-                    occupants={occupants} hopping={hopping}
-                    categoryStyles={categoryStyles} pathNeon={pathNeon}
-                    scale={sc}
-                  />
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Pawn — sits on the current tile at the bottom */}
-          <div style={{
-            position: 'absolute',
-            bottom: 90,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 60,
-            pointerEvents: 'none',
-          }}>
-            <Pawn3D player={currentPlayer} hopping={hopping} />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Bottom status bar ── */}
+      {/* ── Bottom bar ── */}
       <div className="absolute bottom-0 inset-x-0 z-40 flex items-center gap-3 px-4 py-2"
         style={{ background: 'rgba(0,0,8,0.92)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${pathNeon}30` }}>
-        {/* All player chips */}
         <div className="flex gap-2 flex-1 flex-wrap">
           {players.map((p, i) => {
             const hex = PAWN_HEX[p.color] || '#a855f7';
             const isActive = i === currentPlayerIndex;
             return (
               <div key={p.id} className="flex items-center gap-1.5 rounded-lg px-2 py-1"
-                style={{ background: isActive ? `${hex}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${isActive ? hex + 'aa' : 'rgba(255,255,255,0.08)'}` }}>
+                style={{ background: isActive ? `${hex}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${isActive ? hex + 'aa' : 'rgba(255,255,255,0.07)'}` }}>
                 <div className="rounded-full flex items-center justify-center font-black text-white overflow-hidden"
                   style={{ width: 20, height: 20, fontSize: 8, background: `radial-gradient(circle at 35% 35%, ${hex}ee, ${hex}88)`, border: '1px solid rgba(255,255,255,0.5)' }}>
                   {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover rounded-full" /> : p.name.charAt(0)}
@@ -627,10 +634,9 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
             );
           })}
         </div>
-        {/* Current tile */}
         <div className="text-right shrink-0">
           <p className="font-black uppercase text-white/25" style={{ fontSize: 6, letterSpacing: '0.14em' }}>NOW ON</p>
-          <p className="font-black" style={{ fontSize: 10, color: CAT_NEON[currentTile?.category] || pathNeon }}>{currentTile?.name}</p>
+          <p className="font-black" style={{ fontSize: 10, color: curNeon }}>{currentTile?.name}</p>
         </div>
       </div>
     </div>
