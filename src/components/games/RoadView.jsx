@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CityBackdrop } from './CityBackdrop';
 
 const HOP_MS = 440;
 
@@ -443,7 +442,6 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
 
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden">
-      <CityBackdrop imageUrl="/ChatGPT_Image_May_6,_2026,_02_47_41_PM.png" />
 
       {/* ── Header ── */}
       <div className="relative z-10 flex items-center justify-between px-3 py-2 shrink-0"
