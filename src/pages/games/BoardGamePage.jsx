@@ -2292,7 +2292,7 @@ export function BoardGamePage() {
   const [chaosSceneIndex, setChaosSceneIndex] = useState(0);
   const [selectedChaosChoice, setSelectedChaosChoice] = useState(null);
   const [chaosOutcome, setChaosOutcome] = useState(null);
-  const [eliminatedPlayers, setEliminatedPlayers] = useState<string[]>([]);
+  const [eliminatedPlayers, setEliminatedPlayers] = useState([]);
   const [showChaosTransition, setShowChaosTransition] = useState(false);
   // Transportation event state
   const [transportEvent, setTransportEvent] = useState(null);
@@ -2581,7 +2581,7 @@ export function BoardGamePage() {
       }, 800);
     }, 900);
   };
-  const movePlayer = (spaces: number) => {
+  const movePlayer = (spaces) => {
     const player = players[currentPlayerIndex];
     if (!player) return;
     const pathIdx = player.pathIndex !== null ? player.pathIndex : 0;
@@ -3277,8 +3277,13 @@ export function BoardGamePage() {
           </AnimatePresence>
 
           {/* ===== THE BOARD ===== */}
-          <div className="flex-1 relative overflow-hidden" ref={boardRef}>
+          <div className="flex-1 relative overflow-hidden" style={{
+        perspective: '1200px'
+      }} ref={boardRef}>
           
+            {/* Pastel-neon cyber city backdrop */}
+            <CityBackdrop imageUrl="/ChatGPT_Image_May_6,_2026,_02_47_41_PM.png" />
+
             <FloatingParticles count={40} />
             <SparkleBurst active={showBurst} />
 
