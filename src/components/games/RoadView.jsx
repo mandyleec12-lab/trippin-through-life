@@ -225,7 +225,7 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
   }).filter(Boolean);
 
   return (
-    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5, transform: 'none' }}>
 
       {/* ── LOOPING VIDEO BACKGROUND ── */}
       <div className="absolute inset-0" style={{ zIndex: 1 }}>
