@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, Fragment, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import ThreeBackground from './ThreeBackground';
 
 const PATH_NEON_HEX = ['#a855f7', '#ec4899', '#f97316'];
 const PAWN_COLORS = {
@@ -362,7 +363,7 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
       className="absolute inset-0 overflow-hidden z-[5] pointer-events-none"
       style={{ perspective: 980, perspectiveOrigin: '50% 78%' }}
     >
-      <CinematicCityBackdrop accent={neon} districtIndex={activePathIdx} progress={activeLaneProgress} />
+      <ThreeBackground neonColor={neon} progress={activeLaneProgress} />
       <CityLifeOverlay accent={neon} />
 
       <motion.div
