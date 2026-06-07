@@ -361,15 +361,14 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
     <div
       ref={viewportRef}
       className="absolute inset-0 overflow-hidden z-[5] pointer-events-none"
-      style={{ perspective: 980, perspectiveOrigin: '50% 78%' }}
     >
       <ThreeBackground neonColor={neon} progress={activeLaneProgress} />
       <CityLifeOverlay accent={neon} />
 
       <motion.div
         className="absolute left-0 top-0"
-        style={{ width: worldWidth, height: worldHeight, transformOrigin: `${activeLanePoint.x}px ${activeLanePoint.y}px`, transformStyle: 'preserve-3d' }}
-        animate={{ scale: cameraScale, x: cameraX, y: cameraY, rotateX: CAMERA_TILT_DEG, rotateZ: CAMERA_ROLL_DEG }}
+        style={{ width: worldWidth, height: worldHeight, transformOrigin: `${activeLanePoint.x}px ${activeLanePoint.y}px` }}
+        animate={{ scale: cameraScale, x: cameraX, y: cameraY }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <svg className="absolute inset-0" viewBox={`0 0 ${worldWidth} ${worldHeight}`} preserveAspectRatio="none">
@@ -424,7 +423,7 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
                       top: point.y,
                       width,
                       height,
-                      transform: `translate(-50%, -50%) translateZ(${isCurrent ? 8 : 3}px) rotate(${tileRotate}deg) rotateX(-6deg)`,
+                      transform: `translate(-50%, -50%) rotate(${tileRotate}deg)`,
                       transformOrigin: 'center center',
                       borderColor: isCurrent ? `${laneColor}cc` : `${laneColor}${isCheckpoint ? '8f' : '5f'}`,
                       background: 'linear-gradient(180deg, rgba(51,65,85,0.88), rgba(15,23,42,0.98) 65%, rgba(2,6,23,0.98))',
@@ -483,7 +482,7 @@ export function RoadView({ paths, activePathTiles, players, currentPlayerIndex, 
           style={{
             left: activeLanePoint.x,
             top: activeLanePoint.y,
-            transform: `translate(-50%, -100%) translateZ(88px) rotateX(-${CAMERA_TILT_DEG}deg)`,
+            transform: `translate(-50%, -100%)`,
             filter: `drop-shadow(0 0 28px ${neon}cc)`,
             zIndex: 40,
           }}
